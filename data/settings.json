@@ -1,0 +1,41 @@
+{
+  "_version": 1,
+  "sidebar": {
+    "items": [
+      "welcome",
+      "dashboard",
+      "docs",
+      "register",
+      "pnl",
+      "check",
+      "balancesheet",
+      "cashflow",
+      "mappings",
+      "triage",
+      "portfolio",
+      "vendors"
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "level": "beginner",
+    "completedTours": [],
+    "dismissedTips": []
+  },
+  "display": {
+    "showCurrencySymbol": false,
+    "roundAmounts": true
+  },
+  "views": {
+    "register": "table"
+  },
+  "welcome": {
+    "enabled": true
+  },
+  "import": {
+    "suggestions": true
+  },
+  "journal": "data/main.journal",
+  "writeJournal": "data/2026.journal",
+  "$schema": "./settings.schema.json"
+}

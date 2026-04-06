@@ -1,0 +1,24 @@
+; Rules file for credit card CSV import
+; https://hledger.org/hledger.html#csv-format
+;
+; Example CSV with this field mapping:
+; date,description,amount1,amount2
+; 01/15/2026,GROCERY STORE,45.67,
+; 01/16/2026,CUP O' COFFEE,6.50,
+; 01/17/2026,AUTOPAY,,2500.00
+;
+; === Skip header row ===
+skip 1
+; === Map CSV columns to fields ===
+; Adjust these to match your CSV's column order
+fields date, description, amount1, amount2
+; === Date format in the CSV ===
+date-format %m/%d/%Y
+; === Currency ===
+currency $
+; === Default accounts ===
+account1 expenses:unknown
+account2 liabilities:credit-card
+
+if GROCERY
+ account1 expenses:food:groceries

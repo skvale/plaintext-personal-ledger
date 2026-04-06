@@ -1,0 +1,51 @@
+; hledger journal file
+; https://hledger.org/hledger.html
+
+D $1,000.00
+
+; === Account declarations ===
+account assets
+account assets:bank:checking
+account assets:bank:savings
+account assets:cash
+account assets:investments
+account equity
+account equity:opening-balances
+account expenses
+account expenses:entertainment
+account expenses:entertainment:streaming
+account expenses:food
+account expenses:food:dining
+account expenses:food:groceries
+account expenses:health
+account expenses:health:vision
+account expenses:health:medical
+account expenses:housing
+account expenses:housing:insurance
+account expenses:housing:mortgage
+account expenses:housing:mortgage:escrow
+account expenses:housing:mortgage:interest
+account expenses:housing:property tax
+account expenses:housing:utilities
+account expenses:investments
+account expenses:investments:fees
+account expenses:personal
+account expenses:phone
+account expenses:shopping
+account expenses:transportation
+account expenses:transportation:gas
+account expenses:transportation:insurance
+account expenses:unknown
+account income
+account income:interest
+account income:revenue
+account income:salary
+account income:salary:access
+account liabilities
+account liabilities:credit-card
+account liabilities:mortgage
+account liabilities:payable ; reconcile:skip
+
+include 2026.journal
+include recurring.journal
+include budget.journal

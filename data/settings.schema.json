@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "hledger UI Settings",
+  "description": "Configuration for the hledger personal finance UI. Edit this file to customize what appears in the sidebar, enable or disable learning features, and configure widgets.",
+  "type": "object",
+  "properties": {
+    "_version": {
+      "type": "integer",
+      "description": "Settings format version. Do not change — used for future migrations.",
+      "const": 1
+    },
+
+    "sidebar": {
+      "type": "object",
+      "description": "Controls what appears in the left navigation sidebar.",
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "Ordered list of sidebar items. Each entry is either a built-in page ID (string), a special keyword, or an object describing a section header or custom link.\n\nAvailable built-in IDs:\n  dashboard     — Overview of net worth, recent spending, and income\n  register      — Full transaction register with search and filter\n  accounts      — Account tree with balances\n  balancesheet  — Balance sheet report (assets, liabilities, equity)\n  pnl           — Profit & Loss / Income Statement (income vs expenses)\n  cashflow      — Cash flow statement (money moving in/out of accounts)\n  budget        — Budget tracking vs actuals\n  portfolio     — Investment portfolio with market values\n  vendors       — Vendor list with spending history\n  forecast      — Future balance projection based on recurring transactions\n  recurring     — Recurring transaction templates\n  reconcile     — Bank reconciliation tool\n  triage        — Review and categorize uncategorized transactions\n  docs          — Document management and CSV import\n  mappings      — Import mappings editor (.rules files)\n  git           — Transaction history and git diff viewer\n  check         — Journal error checker\n\nSpecial values:\n  divider       — Horizontal rule to visually separate groups of items\n\nObject forms:\n  { \"type\": \"section\", \"label\": \"Reports\" }  — Section heading label\n  { \"type\": \"custom\", \"label\": \"My Link\", \"icon\": \"◈\", \"href\": \"/my-page\" }  — Custom link",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Built-in page ID or 'divider'",
+                "enum": [
+                  "dashboard", "register", "accounts", "balancesheet",
+                  "pnl", "cashflow", "budget", "portfolio", "vendors",
+                  "forecast", "recurring", "reconcile", "triage", "docs",
+                  "mappings", "git", "check", "divider"
+                ]
+              },
+              {
+                "type": "object",
+                "description": "Section heading",
+                "required": ["type", "label"],
+                "properties": {
+                  "type": { "type": "string", "const": "section" },
+                  "label": { "type": "string", "description": "Text to display as the section heading" }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "description": "Custom sidebar link to any URL",
+                "required": ["type", "label", "icon", "href"],
+                "properties": {
+                  "type": { "type": "string", "const": "custom" },
+                  "label": { "type": "string", "description": "Display name in the sidebar" },
+                  "icon": { "type": "string", "description": "Single character or emoji icon" },
+                  "href": { "type": "string", "description": "URL or path to link to" }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "learning": {
+      "type": "object",
+      "description": "Controls educational features — tooltips, guided tours, and explanatory content throughout the UI. Great for people new to personal finance or double-entry accounting.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Show educational content (tooltips, concept explanations, tour prompts). Set to false once you're comfortable with the UI."
+        },
+        "level": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"],
+          "description": "How much detail to show in explanations.\n  beginner     — Plain English descriptions of accounting concepts; avoid jargon\n  intermediate — Assumes basic familiarity; shows accounting terminology\n  advanced     — Full accounting language; no extra hand-holding"
+        },
+        "completedTours": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of tour IDs that have already been completed and should not be shown again. Managed automatically by the UI."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+    "display": {
+      "type": "object",
+      "description": "Display preferences for amounts, formatting, and visual style.",
+      "properties": {
+        "showCurrencySymbol": {
+          "type": "boolean",
+          "description": "Show currency symbols ($, £, etc.) next to amounts. Set to false to hide them for a cleaner look."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "views": {
+      "type": "object",
+      "description": "UI view preferences — layout choices for individual pages.",
+      "properties": {
+        "register": {
+          "type": "string",
+          "enum": ["cards", "table"],
+          "description": "Display mode for the Register page.\n  cards  — Grouped by date, each transaction shows all postings (default)\n  table  — Compact single-row-per-transaction table, good for large date ranges"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

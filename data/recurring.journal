@@ -1,0 +1,2 @@
+; Recurring transaction rules
+; These generate forecast transactions when hledger is run with --forecast.

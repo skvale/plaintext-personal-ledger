@@ -1,0 +1,38 @@
+{
+  "name": "plaintext-personal-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "node build",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5",
+    "@sveltejs/kit": "^2",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^25.5.0",
+    "svelte": "^5.55.0",
+    "svelte-check": "^4",
+    "tailwindcss": "^4.2.2",
+    "typescript": "6.0.0-dev.20260401",
+    "vite": "^8.0.2"
+  },
+  "dependencies": {
+    "@dnd-kit-svelte/core": "^0.0.11",
+    "@dnd-kit-svelte/sortable": "^0.0.11",
+    "@dnd-kit-svelte/utilities": "^0.0.11",
+    "@internationalized/date": "^3.12.0",
+    "bits-ui": "^2.16.3",
+    "chart.js": "^4",
+    "chokidar": "^4",
+    "nanoid": "^5.1.7",
+    "runed": "^0.37.1",
+    "sveltekit-superforms": "^2.30.1",
+    "zod": "^3.25.76"
+  },
+  "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a"
+}
