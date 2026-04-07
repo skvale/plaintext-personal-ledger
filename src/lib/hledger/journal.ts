@@ -6,6 +6,7 @@ const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), "data");
 
 // Read journal - always main.journal (the base/canonical journal with all includes)
 export const READ_JOURNAL = resolve(DATA_DIR, BASE_JOURNAL);
+export const MAIN_JOURNAL = READ_JOURNAL;
 
 // Write journal - defaults to current year journal (e.g., data/2026.journal)
 // Can be overridden via settings.json (writeJournal or journal key)

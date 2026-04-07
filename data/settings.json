@@ -35,7 +35,5 @@
   "import": {
     "suggestions": true
   },
-  "journal": "data/main.journal",
-  "writeJournal": "data/2026.journal",
   "$schema": "./settings.schema.json"
 }

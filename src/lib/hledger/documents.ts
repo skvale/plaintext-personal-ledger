@@ -623,20 +623,45 @@ export async function updateTransaction(
     newLines.push(fmtPosting(p.account, amt || undefined, cleared));
   }
 
+  // Determine which file to write to based on where the transaction is located
+  const writeJournal = await getWriteJournal();
+  const writeJournalContent = await readFile(writeJournal, "utf-8");
+  const writeLines = writeJournalContent.split("\n");
+  
+  // Check if transaction exists in write journal
+  const idStr = String(id);
+  const blockInWrite = typeof block.tindex === 'number'
+    ? findTransactionBlock(writeLines, block.tindex)
+    : findTransactionBlockByTxid(writeLines, idStr);
+  
+  let targetFile: string;
+  let targetLines: string[];
+  
+  if (blockInWrite) {
+    // Transaction found in write journal - write there directly
+    targetFile = writeJournal;
+    targetLines = writeLines;
+  } else {
+    // Transaction not in write journal - use combined lines from main.journal
+    targetFile = READ_JOURNAL;
+    targetLines = lines;
+  }
+  
+  const blockIdx = blockInWrite || block;
   const updated = [
-    ...lines.slice(0, block.start),
+    ...targetLines.slice(0, blockIdx.start),
     ...newLines,
-    ...lines.slice(block.end),
+    ...targetLines.slice(blockIdx.end),
   ];
-  const JOURNAL = await getWriteJournal();
-  await writeFile(JOURNAL, updated.join("\n"), "utf-8");
+  
+  await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await execAsync(`hledger -f "${writeJournal}" check`);
     await sortJournalByDate();
     invalidateCache();
     return { success: true, txid };
   } catch (e: any) {
-    await writeFile(JOURNAL, original, "utf-8");
+    await writeFile(targetFile, original, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
     return {
       success: false,
@@ -663,20 +688,42 @@ export async function updateTransactionRaw(
     return true;
   });
 
+  // Determine which file to write to
+  const writeJournal = await getWriteJournal();
+  const writeJournalContent = await readFile(writeJournal, "utf-8");
+  const writeLines = writeJournalContent.split("\n");
+  
+  const idStr = String(id);
+  const blockInWrite = typeof block.tindex === 'number'
+    ? findTransactionBlock(writeLines, block.tindex)
+    : findTransactionBlockByTxid(writeLines, idStr);
+  
+  let targetFile: string;
+  let targetLines: string[];
+  
+  if (blockInWrite) {
+    targetFile = writeJournal;
+    targetLines = writeLines;
+  } else {
+    targetFile = READ_JOURNAL;
+    targetLines = lines;
+  }
+  
+  const blockIdx = blockInWrite || block;
   const updated = [
-    ...lines.slice(0, block.start),
+    ...targetLines.slice(0, blockIdx.start),
     ...newLines,
-    ...lines.slice(block.end),
+    ...targetLines.slice(blockIdx.end),
   ];
-  const JOURNAL = await getWriteJournal();
-  await writeFile(JOURNAL, updated.join("\n"), "utf-8");
+  
+  await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await execAsync(`hledger -f "${writeJournal}" check`);
     await sortJournalByDate();
     invalidateCache();
     return { success: true };
   } catch (e: any) {
-    await writeFile(JOURNAL, original, "utf-8");
+    await writeFile(targetFile, original, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
     return {
       success: false,
