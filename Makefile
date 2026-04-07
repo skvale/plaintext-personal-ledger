@@ -1,4 +1,6 @@
-JOURNAL := data/main.journal
+#!/usr/bin/env make -s
+DATA_DIR ?= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/data
+JOURNAL := $(DATA_DIR)/main.journal
 HLEDGER := hledger -f $(JOURNAL)
 
 # === Import ===

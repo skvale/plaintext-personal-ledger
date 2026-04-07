@@ -89,10 +89,20 @@
 
           {#if isExpanded(section.account)}
             {#each section.rows as row}
+              {@const parts = row.name.split(':')}
               {@const hasChildren = section.rows.some(r => r.name.startsWith(row.name + ':'))}
-              {@const parentInData = section.rows.some(r => row.name.startsWith(r.name + ':'))}
-              {@const indent = parentInData ? (row.depth - 1) : 0}
-              {@const label = parentInData ? row.name.split(':').pop() : row.name.split(':').slice(1).join(':')}
+              {@const sectionPrefix = section.account + ':'}
+              {@const findParent = (pts: string[]): number => {
+                for (let i = pts.length - 2; i >= 1; i--) {
+                  const parent = sectionPrefix + pts.slice(1, i + 1).join(':');
+                  if (section.rows.some(r => r.name === parent)) return i;
+                }
+                return -1;
+              }}
+              {@const parentIdx = findParent(parts)}
+              {@const parentInData = parentIdx >= 1}
+              {@const indent = parentInData ? parentIdx : 0}
+              {@const label = parentInData ? parts.slice(parentIdx + 1).join(':') : parts.slice(1).join(':')}
               <tr class="border-b border-black/[0.08] dark:border-white/[0.06] hover:border-b-slate-500 dark:hover:border-b-slate-500 transition-colors">
                 <td class="px-5 py-2.5 whitespace-nowrap sticky left-0 bg-slate-900 z-10" style="padding-left: {20 + indent * 16}px">
                   <span class="font-mono text-sm {hasChildren ? 'font-medium' : ''} {section.amountColor}">{label}</span>

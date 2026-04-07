@@ -103,6 +103,7 @@ export async function getBalanceSheetMultiMonth(
   const json = await runJson<any>([
     "balancesheet",
     "--tree",
+    "--auto",
     "--monthly",
     "--depth",
     "6",
@@ -139,7 +140,6 @@ export async function getBalanceSheetMultiMonth(
       );
       rows.push({ name: fullName, depth, type, amounts });
     }
-    rows.sort((a, b) => a.name.localeCompare(b.name));
     return rows;
   }
 

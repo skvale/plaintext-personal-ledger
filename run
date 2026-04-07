@@ -1,0 +1,16 @@
+#!/bin/sh
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+export DATA_DIR="${DATA_DIR:-$SCRIPT_DIR/data}"
+export LEDGER_FILE="${DATA_DIR}/main.journal"
+cd "$SCRIPT_DIR" 
+
+cleanup() {
+  kill "$PID" 2>/dev/null
+  exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+node build/index.js "$@" &
+PID=$!
+wait $PID
