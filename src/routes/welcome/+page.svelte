@@ -69,7 +69,7 @@
   }
 </script>
 
-<div class="space-y-8 max-w-2xl">
+<div class="space-y-8 max-w-2xl mx-auto">
   <!-- Hero -->
   <div class="text-center py-6">
     <div class="inline-block mb-4">

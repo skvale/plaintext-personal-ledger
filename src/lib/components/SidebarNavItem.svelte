@@ -44,11 +44,11 @@
       onclick={() => onsidebarclose?.()}
       class="relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium
         {isDragging.current ? 'invisible' : ''}
-        {$page.url.pathname === item.href
-        ? 'text-blue-400'
-        : 'text-slate-100 hover:bg-slate-800 hover:text-slate-100'}"
+{$page.url.pathname === item.href || (item.href !== '/' && $page.url.pathname.startsWith(item.href + '/'))
+          ? 'text-blue-400'
+          : 'text-slate-100 hover:bg-slate-800 hover:text-slate-100'}"
     >
-      {#if $page.url.pathname === item.href && !isDragging.current}
+      {#if ($page.url.pathname === item.href || (item.href !== '/' && $page.url.pathname.startsWith(item.href + '/'))) && !isDragging.current}
         <div class="absolute inset-0 rounded-md bg-blue-400/10" style="view-transition-name: nav-pill;"></div>
       {/if}
       <span class="relative text-sm text-slate-100 cursor-grab hover:text-slate-100 select-none" {...listeners.current}>⠿</span>

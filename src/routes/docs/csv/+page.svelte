@@ -18,41 +18,45 @@
   }
 </script>
 
-<div class="mb-5 flex items-center justify-between gap-4">
-  <div class="min-w-0">
-    <h1 class="truncate text-lg font-semibold text-slate-100">{data.name}</h1>
-    <div class="mt-0.5 flex items-center gap-2">
-      <span class="text-sm text-slate-100">{data.rows.length} rows</span>
-      {#if data.importStatus === 'never'}
-        <span class="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">not imported</span>
-      {:else if data.importStatus === 'partial'}
-        <span class="rounded-full bg-blue-300/10 px-2 py-0.5 text-xs font-medium text-blue-500">new rows since {data.latestImport}</span>
-      {:else}
-        <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">imported through {data.latestImport}</span>
-      {/if}
-    </div>
-  </div>
-  <div class="flex shrink-0 gap-2">
-    <a
-      href="/mappings?csv={encodeURIComponent(data.rel)}"
-      class="btn-secondary"
-    >
-      Create rule
-    </a>
-    {#if data.importStatus !== 'complete'}
-      <a
-        href="/docs?import={encodeURIComponent(data.rel)}"
-        class="btn-primary"
-      >
-        Import
-      </a>
-    {/if}
+<div class="mb-5 flex flex-col gap-2">
+  <div class="flex items-center justify-between gap-4">
     <a
       href="/docs"
       class="text-sm text-slate-100 transition-colors hover:text-slate-100"
     >
       ← Documents
     </a>
+  </div>
+  <div class="flex items-center justify-between gap-4">
+    <div class="min-w-0">
+      <h1 class="truncate text-lg font-semibold text-slate-100">{data.name}</h1>
+      <div class="mt-0.5 flex items-center gap-2">
+        <span class="text-sm text-slate-100">{data.rows.length} rows</span>
+        {#if data.importStatus === 'never'}
+          <span class="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">not imported</span>
+        {:else if data.importStatus === 'partial'}
+          <span class="rounded-full bg-blue-300/10 px-2 py-0.5 text-xs font-medium text-blue-500">new rows since {data.latestImport}</span>
+        {:else}
+          <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">imported through {data.latestImport}</span>
+        {/if}
+      </div>
+    </div>
+    <div class="flex shrink-0 gap-2">
+      <a
+        href="/mappings?csv={encodeURIComponent(data.rel)}"
+        class="btn-secondary"
+      >
+        Create rule
+      </a>
+      {#if data.importStatus !== 'complete'}
+        <a
+          href="/docs?import={encodeURIComponent(data.rel)}"
+          class="btn-primary"
+        >
+          Import
+        </a>
+      {/if}
+    </div>
   </div>
 </div>
 

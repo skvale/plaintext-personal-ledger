@@ -1108,7 +1108,6 @@
 
                 <a
                   href={file.ext === 'csv' ? `/docs/csv?p=${encodeURIComponent(file.relPath)}` : fileUrl(file.relPath)}
-                  target={['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? '_blank' : undefined}
                   download={!['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? file.name : undefined}
                   class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100">
                   {['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? 'View' : 'Download'}

@@ -240,7 +240,8 @@ export async function detectCsvFromPath(
       const seenDesc = new Set<string>();
       for (let r = 1; r < lines.length; r++) {
         const row = parseCsvLine(lines[r]);
-        const desc = row[descIdx]?.trim();
+        const rawDesc = row[descIdx]?.trim() ?? "";
+        const desc = rawDesc.split(";")[0].trim();
         if (desc && !seenDesc.has(desc.toUpperCase())) {
           seenDesc.add(desc.toUpperCase());
           descriptions.push(desc);
@@ -330,7 +331,8 @@ export async function generateRulesFromCsvContent(
       const seenDesc = new Set<string>();
       for (let r = 1; r < lines.length; r++) {
         const row = parseCsvLine(lines[r]);
-        const desc = row[descIdx]?.trim();
+        const rawDesc = row[descIdx]?.trim() ?? "";
+        const desc = rawDesc.split(";")[0].trim();
         if (desc && !seenDesc.has(desc.toUpperCase())) {
           seenDesc.add(desc.toUpperCase());
           descriptions.push(desc);
@@ -612,27 +614,37 @@ export async function rulesFileExists(filename: string): Promise<boolean> {
 // ─── Preview Normalization ─────────────────────────────────────────────────────
 
 function normalizePreview(raw: string): string {
-  const lines = raw.split("\n");
+  const blocks = raw.split(/\n\n+/);
 
   const postingRe = /^(\s{2,})(\S[^$\s]*)(\s+)(\S.*)$/;
-  let maxAcctLen = 0;
-  for (const line of lines) {
-    const m = line.match(postingRe);
-    if (m) maxAcctLen = Math.max(maxAcctLen, m[2].length);
-  }
 
-  return lines
-    .map((line) => {
-      const m = line.match(/^(\s{2,})(\S[^\s]*)(\s{2,})(\S.*)$/);
-      if (!m) return line;
-      const [, , account, , rest] = m;
-      const assertIdx = rest.indexOf(" = ");
-      const amount = assertIdx >= 0 ? rest.slice(0, assertIdx) : rest;
-      const assertion = assertIdx >= 0 ? rest.slice(assertIdx) : "";
-      const padding = " ".repeat(Math.max(2, maxAcctLen - account.length + 2));
-      return `    ${account}${padding}${amount}${assertion}`;
-    })
-    .join("\n");
+  const processed = blocks.map((block) => {
+    const lines = block.split("\n");
+    let maxAcctLen = 0;
+    for (const line of lines) {
+      const m = line.match(postingRe);
+      if (m) maxAcctLen = Math.max(maxAcctLen, m[2].length);
+    }
+
+    return lines
+      .map((line, i) => {
+        const m = line.match(/^(\s{2,})(\S[^\s]*)(\s{2,})(\S.*)$/);
+        if (!m) return line;
+        const [, , account, , rest] = m;
+        const assertIdx = rest.indexOf(" = ");
+        const amount = assertIdx >= 0 ? rest.slice(0, assertIdx) : rest;
+        const assertion = assertIdx >= 0 ? rest.slice(assertIdx) : "";
+        const isLastPosting = i === lines.length - 1;
+        const padding = " ".repeat(Math.max(2, maxAcctLen - account.length + 2));
+        if (isLastPosting && amount.trim() && !assertion) {
+          return `    ${account}`;
+        }
+        return `    ${account}${padding}${amount}${assertion}`;
+      })
+      .join("\n");
+  });
+
+  return processed.join("\n\n");
 }
 
 // ─── CSV Import ────────────────────────────────────────────────────────────────
