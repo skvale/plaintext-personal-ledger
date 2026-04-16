@@ -1,5 +1,5 @@
 import { resolve, dirname, join } from "node:path";
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, writeFile } from "node:fs/promises";
 
 const BASE_JOURNAL = "main.journal";
 const DATA_DIR = process.env.DATA_DIR ?? resolve(process.cwd(), "data");
@@ -35,12 +35,25 @@ export async function getWriteJournal(): Promise<string> {
     const journalPath = journal.startsWith("/")
       ? journal
       : journalBase;
-    writeJournalCache = resolve(DATA_DIR, journalPath);
+    const resolvedPath = resolve(DATA_DIR, journalPath);
+    // Create journal file if it doesn't exist
+    try {
+      await access(resolvedPath);
+    } catch {
+      await writeFile(resolvedPath, "", "utf-8");
+    }
+    writeJournalCache = resolvedPath;
     return writeJournalCache;
   } catch (e) {
     console.error(e);
     // Fall back to year journal if settings can't be read
-    writeJournalCache = resolve(DATA_DIR, yearJournal);
+    const resolvedPath = resolve(DATA_DIR, yearJournal);
+    try {
+      await access(resolvedPath);
+    } catch {
+      await writeFile(resolvedPath, "", "utf-8");
+    }
+    writeJournalCache = resolvedPath;
     return writeJournalCache;
   }
 }

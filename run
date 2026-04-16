@@ -1,6 +1,12 @@
 #!/bin/sh
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-export DATA_DIR="${DATA_DIR:-$SCRIPT_DIR/data}"
+
+if [ -z "$DATA_DIR" ]; then
+  echo "Error: DATA_DIR environment variable is required" >&2
+  echo "Usage: DATA_DIR=/path/to/data ./run [args...]" >&2
+  exit 1
+fi
+
 export LEDGER_FILE="${DATA_DIR}/main.journal"
 cd "$SCRIPT_DIR" 
 

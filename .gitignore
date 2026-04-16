@@ -9,3 +9,5 @@ dist/
 .env.production
 .env.test
 .env.*.local
+test/data
+test-results/

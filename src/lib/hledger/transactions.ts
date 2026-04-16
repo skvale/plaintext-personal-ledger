@@ -202,13 +202,13 @@ export async function getDeclaredAccounts(): Promise<string[]> {
     .map((l) => l.replace(/\s*;.*$/, ""));
 }
 
-import { READ_JOURNAL, MAIN_JOURNAL } from "./journal.js";
+import { READ_JOURNAL, MAIN_JOURNAL, getWriteJournal } from "./journal.js";
 
 export async function addAccountDeclaration(
   name: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { readFile, writeFile } = await import("node:fs/promises");
-  const JOURNAL = MAIN_JOURNAL;
+  const JOURNAL = await getWriteJournal();
   const content = await readFile(JOURNAL, "utf-8");
   // Insert after the last existing account declaration, or at top after comments
   const lines = content.split("\n");
@@ -275,7 +275,13 @@ export async function appendTransaction(txn: {
   const entry = lines.join("\n") + "\n";
 
   const JOURNAL = await getWriteJournal();
-  const original = await readFile(JOURNAL, "utf-8");
+  let original = "";
+  try {
+    original = await readFile(JOURNAL, "utf-8");
+  } catch {
+    await writeFile(JOURNAL, "", "utf-8");
+    original = "";
+  }
   await writeFile(JOURNAL, original + entry, "utf-8");
 
   try {

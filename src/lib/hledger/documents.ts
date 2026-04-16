@@ -641,18 +641,15 @@ export async function updateTransaction(
     // Transaction found in write journal - write there directly
     targetFile = writeJournal;
     targetLines = writeLines;
+    const blockIdx = blockInWrite;
+    targetLines.splice(blockIdx.start, blockIdx.end - blockIdx.start, ...newLines);
   } else {
-    // Transaction not in write journal - use combined lines from main.journal
-    targetFile = READ_JOURNAL;
-    targetLines = lines;
+    // Transaction not in write journal - append to write journal
+    targetFile = writeJournal;
+    targetLines = [...writeLines, "", ...newLines];
   }
   
-  const blockIdx = blockInWrite || block;
-  const updated = [
-    ...targetLines.slice(0, blockIdx.start),
-    ...newLines,
-    ...targetLines.slice(blockIdx.end),
-  ];
+  const updated = targetLines;
   
   await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
