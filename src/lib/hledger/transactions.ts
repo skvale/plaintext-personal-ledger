@@ -2,7 +2,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { nanoid } from "nanoid";
 import { runJson, run, invalidateCache } from "./cache.js";
-import { getWriteJournal } from "./journal.js";
+import { READ_JOURNAL, MAIN_JOURNAL, getWriteJournal } from "./journal.js";
 import {
   pickAmount,
   pickCommodity,
@@ -201,8 +201,6 @@ export async function getDeclaredAccounts(): Promise<string[]> {
     .filter(Boolean)
     .map((l) => l.replace(/\s*;.*$/, ""));
 }
-
-import { READ_JOURNAL, MAIN_JOURNAL, getWriteJournal } from "./journal.js";
 
 export async function addAccountDeclaration(
   name: string,

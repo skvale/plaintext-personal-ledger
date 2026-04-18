@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getAccountNames, getVendors, appendTransaction, addAccountDeclaration } from '$lib/hledger.server.js';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
   const [accounts, vendorRows] = await Promise.all([getAccountNames(), getVendors()]);
   const vendors = vendorRows.map((p) => p.vendor);
   return { accounts, vendors };

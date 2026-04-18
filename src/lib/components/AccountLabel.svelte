@@ -23,4 +23,4 @@
   const sub = $derived(accountWithoutType(account));
 </script>
 
-<span class="inline-flex items-center whitespace-nowrap"><AccountBadge account={account} size={resolvedSize} />{#if sub}<span class="truncate font-mono {textClass} {accountColor(account)}">:{sub}</span>{/if}</span>
+<span class="inline-flex items-center whitespace-nowrap min-w-0"><AccountBadge account={account} size={resolvedSize} />{#if sub}<span class="truncate font-mono {textClass} {accountColor(account)}">:{sub}</span>{/if}</span>

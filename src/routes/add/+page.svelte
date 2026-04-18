@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
+  import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
@@ -112,7 +113,12 @@
 <div class="rounded-xl border border-slate-400 bg-slate-900 p-6 animate-in animate-in-2">
   <form method="POST" use:enhance={() => {
       submitting = true;
-      return async ({ update }) => { submitting = false; await update(); };
+      return async ({ result }) => {
+        submitting = false;
+        if (result.type === 'redirect') {
+          goto((result as { location: string }).location);
+        }
+      };
     }} class="flex flex-col gap-5">
     <input type="hidden" name="postings" value={JSON.stringify(postings.map(p => ({ account: p.account, amount: p.amount })))} />
 

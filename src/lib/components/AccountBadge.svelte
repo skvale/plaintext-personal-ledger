@@ -22,4 +22,4 @@
           : 'px-1.5 py-0.5 text-xs');
 </script>
 
-<span class="inline-flex shrink-0 rounded border font-mono font-semibold capitalize align-text-bottom {sizeClass} {badge}">{label}</span>
+<span class="inline-flex shrink-0 rounded border font-mono font-semibold capitalize align-text-bottom {sizeClass} {badge} truncate">{label}</span>

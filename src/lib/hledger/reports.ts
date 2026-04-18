@@ -601,63 +601,31 @@ export async function getUnrealizedGains(): Promise<UnrealizedGains> {
   const ytdStart = `${now.getFullYear()}-01-01`;
 
   const range = lastNMonths(13);
-  const [totalJson, ytdJson, m1Json, m3Json, m6Json, m12Json, monthlyJson] =
-    await Promise.all([
-      runJson<any>(["bal", "income:unrealized", "--no-total", "--flat"]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--no-total",
-        "--flat",
-        "-p",
-        `${ytdStart}..`,
-      ]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--no-total",
-        "--flat",
-        "-p",
-        `${monthsAgo(1)}..`,
-      ]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--no-total",
-        "--flat",
-        "-p",
-        `${monthsAgo(3)}..`,
-      ]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--no-total",
-        "--flat",
-        "-p",
-        `${monthsAgo(6)}..`,
-      ]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--no-total",
-        "--flat",
-        "-p",
-        `${monthsAgo(12)}..`,
-      ]),
-      runJson<any>([
-        "bal",
-        "income:unrealized",
-        "--monthly",
-        "--flat",
-        "-p",
-        range,
-      ]),
-    ]);
-
-  function extractSigned(json: any): number {
+  async function getUnrealized(pattern: string, period?: string): Promise<number> {
+    const args = ["bal", pattern, "--no-total", "--flat"];
+    if (period) args.push("-p", period);
+    const json = await runJson<any>(args);
     const rows: any[] = Array.isArray(json) ? (json[0] ?? []) : [];
     return -rows.reduce((sum, row) => sum + pickAmount(row[3]), 0);
   }
+  const [total, ytd, m1, m3, m6, m12, monthlyJson] = await Promise.all([
+    getUnrealized("equity:unrealized"),
+    getUnrealized("equity:unrealized", `${ytdStart}..`),
+    getUnrealized("equity:unrealized", `${monthsAgo(1)}..`),
+    getUnrealized("equity:unrealized", `${monthsAgo(3)}..`),
+    getUnrealized("equity:unrealized", `${monthsAgo(6)}..`),
+    getUnrealized("equity:unrealized", `${monthsAgo(12)}..`),
+    runJson<any>(["bal", "equity:unrealized", "--monthly", "--flat", "-p", range]),
+  ]);
+  const [incTotal, incYtd, incM1, incM3, incM6, incM12, incMonthlyJson] = await Promise.all([
+    getUnrealized("income:unrealized"),
+    getUnrealized("income:unrealized", `${ytdStart}..`),
+    getUnrealized("income:unrealized", `${monthsAgo(1)}..`),
+    getUnrealized("income:unrealized", `${monthsAgo(3)}..`),
+    getUnrealized("income:unrealized", `${monthsAgo(6)}..`),
+    getUnrealized("income:unrealized", `${monthsAgo(12)}..`),
+    runJson<any>(["bal", "income:unrealized", "--monthly", "--flat", "-p", range]),
+  ]);
 
   const prDates: any[] = monthlyJson?.prDates ?? [];
   const prRows: any[] = monthlyJson?.prRows ?? [];
@@ -674,17 +642,41 @@ export async function getUnrealizedGains(): Promise<UnrealizedGains> {
     }
   }
 
+  const incPrDates: any[] = incMonthlyJson?.prDates ?? [];
+  const incPrRows: any[] = incMonthlyJson?.prRows ?? [];
+  let incCumulative = 0;
+  const incMonthlyData: { month: string; cumulative: number }[] = [];
+  if (incPrRows.length > 0) {
+    const amounts: any[] = incPrRows[0]?.prrAmounts ?? [];
+    for (let i = 0; i < incPrDates.length; i++) {
+      const month = periodStart(incPrDates[i]);
+      const change = -pickAmount(amounts[i]);
+      incCumulative += change;
+      incMonthlyData.push({ month, cumulative: incTotal + incCumulative });
+    }
+  }
+
+  const allMonthly: { month: string; cumulative: number }[] = [];
+  for (let i = 0; i < Math.max(prDates.length, incPrDates.length); i++) {
+    const eq = monthly[i];
+    const inc = incMonthlyData[i];
+    allMonthly.push({
+      month: eq?.month ?? inc?.month ?? "",
+      cumulative: (eq?.cumulative ?? total) + (inc?.cumulative ?? incTotal),
+    });
+  }
+
   return {
-    total: extractSigned(totalJson),
+    total: total + incTotal,
     periods: {
       period: "gains",
-      ytd: extractSigned(ytdJson),
-      m1: extractSigned(m1Json),
-      m3: extractSigned(m3Json),
-      m6: extractSigned(m6Json),
-      m12: extractSigned(m12Json),
+      ytd: ytd + incYtd,
+      m1: m1 + incM1,
+      m3: m3 + incM3,
+      m6: m6 + incM6,
+      m12: m12 + incM12,
     },
-    monthly,
+    monthly: allMonthly,
   };
 }
 
