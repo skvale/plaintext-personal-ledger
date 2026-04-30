@@ -206,7 +206,7 @@ export async function addAccountDeclaration(
   name: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { readFile, writeFile } = await import("node:fs/promises");
-  const JOURNAL = await getWriteJournal();
+  const JOURNAL = MAIN_JOURNAL;
   const content = await readFile(JOURNAL, "utf-8");
   // Insert after the last existing account declaration, or at top after comments
   const lines = content.split("\n");
