@@ -17,12 +17,9 @@ export const load: PageServerLoad = async ({ url }) => {
   const query = url.searchParams.get('q') ?? undefined;
   const drop = Number(url.searchParams.get('drop') ?? '0');
 
-  // Default to this month so we don't load every transaction on first visit.
-  // The "All time" preset clears 'from', which is preserved as an explicit empty string in the URL.
-  const hasFromParam = url.searchParams.has('from');
-  const from = hasFromParam ? (url.searchParams.get('from') ?? undefined) : thisMonthStart();
-  const hasToParam = url.searchParams.has('to');
-  const to = hasToParam ? (url.searchParams.get('to') ?? undefined) : (!hasFromParam ? nextMonthStart() : undefined);
+  // Default to all time (no date filter).
+  const from = url.searchParams.get('from') ?? undefined;
+  const to = url.searchParams.get('to') ?? undefined;
 
   const [transactions, accounts, txnDocs] = await Promise.all([
     getTransactions({ account, query, from, to, drop: drop || undefined }),
@@ -44,6 +41,6 @@ export const load: PageServerLoad = async ({ url }) => {
     from: from ?? '',
     to: to ?? '',
     drop,
-    isDefaultView: !hasFromParam && !account && !query && !to
+    isDefaultView: !account && !query
   };
 };

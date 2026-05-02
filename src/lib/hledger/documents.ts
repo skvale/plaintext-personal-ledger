@@ -5,6 +5,7 @@ import {
   stat,
   mkdir,
   access,
+  unlink,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { runJson } from "./cache.js";
@@ -790,5 +791,27 @@ export async function deleteTransaction(
         .slice(0, 3)
         .join(" "),
     };
+  }
+}
+
+// ─── Document Delete ─────────────────────────────────────────────────────────
+
+import { resolve } from "node:path";
+
+export async function deleteDocument(
+  relPath: string,
+): Promise<{ success: boolean; error?: string }> {
+  const abs = join(STATEMENTS_DIR, relPath);
+  const resolvedAbs = resolve(abs);
+  const resolvedStatements = resolve(STATEMENTS_DIR);
+  if (!resolvedAbs.startsWith(resolvedStatements + "/")) {
+    return { success: false, error: "Invalid path" };
+  }
+  try {
+    await unlink(abs);
+    invalidateCache();
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
   }
 }

@@ -202,6 +202,21 @@ export async function getDeclaredAccounts(): Promise<string[]> {
     .map((l) => l.replace(/\s*;.*$/, ""));
 }
 
+export async function getAccountDescriptions(): Promise<Record<string, string>> {
+  const { readFile } = await import("node:fs/promises");
+  const content = await readFile(MAIN_JOURNAL, "utf-8");
+  const result: Record<string, string> = {};
+  for (const line of content.split("\n")) {
+    const match = line.match(/^account\s+(\S+)\s*;?\s*(.*)$/);
+    if (match) {
+      const name = match[1].trim();
+      const desc = match[2].trim();
+      if (desc) result[name] = desc;
+    }
+  }
+  return result;
+}
+
 export async function addAccountDeclaration(
   name: string,
 ): Promise<{ success: boolean; error?: string }> {

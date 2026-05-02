@@ -59,10 +59,8 @@
     account = '';
     query = '';
     currentPage = 1;
-    // Reset period to default (this month)
-    periodMode = 'month';
-    const now = new Date();
-    periodAnchor = { year: now.getFullYear(), month: now.getMonth() };
+    periodMode = 'all';
+    periodAnchor = { year: new Date().getFullYear(), month: new Date().getMonth() };
     from = '';
     to = '';
     goto('/register', { replaceState: true });
@@ -77,7 +75,7 @@
 
   type PeriodMode = 'month' | 'year' | 'all';
 
-  // Derive initial period mode and anchor from URL params
+  // Derive period mode and anchor from URL params
   function initPeriod(): { mode: PeriodMode; anchor: { year: number; month: number } } {
     const f = data.from;
     const t = data.to;
@@ -91,7 +89,7 @@
       }
       return { mode: 'month', anchor };
     }
-    return { mode: 'month', anchor: { year: new Date().getFullYear(), month: new Date().getMonth() } };
+    return { mode: 'all', anchor: { year: new Date().getFullYear(), month: new Date().getMonth() } };
   }
 
   const initial = initPeriod();
@@ -124,6 +122,13 @@
     } else if (periodMode === 'year') {
       periodAnchor = { year: periodAnchor.year + delta, month: periodAnchor.month };
     }
+    applyPeriod();
+  }
+
+  function showThisMonth() {
+    periodMode = 'month';
+    const now = new Date();
+    periodAnchor = { year: now.getFullYear(), month: now.getMonth() };
     applyPeriod();
   }
 
@@ -231,7 +236,7 @@
       <span class="text-sm text-rose-400">{fmt(filteredTotal)} <span class="font-sans text-xs text-slate-100">{account || 'expenses'}</span></span>
     {/if}
     {#if data.isDefaultView}
-      <span class="text-xs text-slate-100">· this month · <button class="underline underline-offset-2 hover:text-slate-100" onclick={() => setPeriodMode('all')}>show all</button></span>
+      <span class="text-xs text-slate-100">· <button class="underline underline-offset-2 hover:text-slate-100" onclick={showThisMonth}>show this month</button></span>
     {/if}
   </div>
   <div class="flex items-center gap-2">

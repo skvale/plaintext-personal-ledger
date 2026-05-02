@@ -72,7 +72,7 @@ export function accountSortKey(acct: string): number {
 export function amountColor(amount: number, acct: string): string {
   if (amount === 0) return "text-slate-100";
   if (acct.startsWith("expenses")) return "text-rose-400";
-  if (acct.startsWith("income")) return "text-emerald-400";
+  if (acct.startsWith("income")) return amount > 0 ? "text-rose-400" : "text-emerald-400";
   if (acct.startsWith("assets"))
     return amount > 0 ? "text-blue-500" : "text-rose-400";
   if (acct.startsWith("liabilities"))

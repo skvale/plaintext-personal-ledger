@@ -9,7 +9,7 @@
   import Combobox from '$lib/components/Combobox.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import { Select } from 'bits-ui';
+  import { Select, AlertDialog } from 'bits-ui';
   import { accountTail, accountColor } from '$lib/account-colors.js';
   import AccountBadge from '$lib/components/AccountBadge.svelte';
   import type { PageData, ActionData } from './$types';
@@ -129,6 +129,9 @@
   let payAccount = $state('');
   let payError = $state('');
   let paySubmitting = $state(false);
+
+  let showDeleteConfirm = $state(false);
+  let deletingFile = $state<{ name: string; relPath: string } | null>(null);
 
 
   async function extractPdf(file: File) {
@@ -1112,6 +1115,11 @@
                   class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100">
                   {['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? 'View' : 'Download'}
                 </a>
+                <button
+                  type="button"
+                  onclick={() => { deletingFile = { name: file.name, relPath: file.relPath }; showDeleteConfirm = true; }}
+                  class="rounded-md border border-rose-500/40 px-2.5 py-1 text-xs text-rose-400 transition-colors hover:bg-rose-500/20"
+                >Delete</button>
               </div>
             {/each}
           </div>
@@ -1120,6 +1128,37 @@
     {/each}
   </div>
 {/if}
+
+<!-- Delete confirmation -->
+<AlertDialog.Root bind:open={showDeleteConfirm}>
+  <AlertDialog.Portal>
+    <AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/60" />
+    <AlertDialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-300 bg-slate-900 p-6 shadow-2xl">
+      <AlertDialog.Title class="mb-2 text-base font-semibold text-slate-100">Delete file?</AlertDialog.Title>
+      <AlertDialog.Description class="mb-5 text-sm text-slate-100">
+        "{deletingFile?.name}" will be permanently removed.
+      </AlertDialog.Description>
+      <div class="flex justify-end gap-3">
+        <AlertDialog.Cancel class="btn-cancel">
+          Cancel
+        </AlertDialog.Cancel>
+        <button
+          type="button"
+          class="btn-primary bg-rose-500 hover:bg-rose-600 hover:opacity-100"
+          onclick={async () => {
+            if (!deletingFile) return;
+            const fd = new FormData();
+            fd.set('relPath', deletingFile.relPath);
+            const res = await fetch('?/deleteDoc', { method: 'POST', body: fd });
+            if (res.ok) { invalidateAll(); }
+            showDeleteConfirm = false;
+            deletingFile = null;
+          }}
+        >Delete</button>
+      </div>
+    </AlertDialog.Content>
+  </AlertDialog.Portal>
+</AlertDialog.Root>
 
 {/if}
 

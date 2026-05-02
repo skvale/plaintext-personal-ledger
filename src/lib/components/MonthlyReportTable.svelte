@@ -40,9 +40,9 @@
     return `${names[parseInt(m) - 1]} ${y}`;
   }
 
-  function fmtSigned(n: number) {
-    if (!signed) return fmt(n);
-    return (n >= 0 ? '+' : '−') + fmt(n);
+  function getAmountColor(account: string, amount: number, defaultColor: string) {
+    if (account === 'income' && amount < 0) return 'text-rose-400';
+    return defaultColor;
   }
 
   // Track expanded state per section
@@ -80,7 +80,7 @@
             </td>
             {#if !isExpanded(section.account)}
               {#each section.totals as amount}
-                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {section.amountColor}"><Amount value={amount} /></td>
+                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}"><Amount value={amount} /></td>
               {/each}
             {:else}
               {#each months as _}<td></td>{/each}
@@ -108,7 +108,7 @@
                   <span class="font-mono text-sm {hasChildren ? 'font-medium' : ''} {section.amountColor}">{label}</span>
                 </td>
                 {#each row.amounts as amount}
-                  <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap {section.amountColor}">
+                  <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}">
                     {#if !Number.isNaN(amount)}<Amount value={amount} />{/if}
                   </td>
                 {/each}
@@ -122,7 +122,7 @@
                 </span>
               </td>
               {#each section.totals as amount}
-                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {section.amountColor}"><Amount value={amount} /></td>
+                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}"><Amount value={amount} /></td>
               {/each}
             </tr>
           {/if}

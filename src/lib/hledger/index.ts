@@ -20,6 +20,7 @@ export {
   SETTINGS_FILE,
   JOURNAL_DIR,
   BUDGET_JOURNAL,
+  MAIN_JOURNAL,
 } from "./journal.js";
 
 // ─── Runner ───────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export {
   getTransactions,
   getAccountNames,
   getDeclaredAccounts,
+  getAccountDescriptions,
   addAccountDeclaration,
   deleteAccountDeclaration,
   appendTransaction,
@@ -183,6 +185,7 @@ export {
   updateTransaction,
   updateTransactionRaw,
   deleteTransaction,
+  deleteDocument,
 } from "./documents.js";
 
 export type {

@@ -200,7 +200,7 @@
   <div class="glass-card relative overflow-hidden rounded-xl border border-slate-400 p-4">
     <div class="sparkline-wrap"><canvas bind:this={sparkInc}></canvas></div>
     <p class="relative mb-2 text-xs font-semibold tracking-wide text-slate-100">Income</p>
-    <p class="relative text-xl font-medium text-emerald-400 glow-emerald"><Amount value={data.monthSummary.income} /></p>
+    <p class="relative text-xl font-medium {data.monthSummary.income > 0 ? 'text-emerald-400 glow-emerald' : 'text-rose-400 glow-rose'}"><Amount value={data.monthSummary.income} /></p>
   </div>
 
   <!-- Expenses -->

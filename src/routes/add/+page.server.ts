@@ -46,6 +46,7 @@ export const actions: Actions = {
       return fail(422, { error: result.error ?? 'Validation failed', date, vendor, note });
     }
 
-    redirect(303, '/register');
+    const from = new URL(request.url).searchParams.get('from') ?? '/register';
+    redirect(303, from);
   }
 };

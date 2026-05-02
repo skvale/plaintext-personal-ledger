@@ -144,12 +144,17 @@
           {@const parts = acc.name.split(':')}
           {@const depth = parts.length - 1}
           {@const leaf = parts[parts.length - 1]}
-          <div class="flex items-center gap-3 px-5 py-2.5" style="padding-left: {20 + depth * 16}px">
-            <div class="flex flex-1 items-center">
-              {#if depth === 0}
-                <AccountBadge account={acc.name} />
-              {:else}
-                <span class="font-mono text-sm {accountColor(acc.name)}">{leaf}</span>
+          <div class="flex flex-1 items-center justify-between gap-2 px-5 py-2.5" style="padding-left: {20 + depth * 16}px">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                {#if depth === 0}
+                  <AccountBadge account={acc.name} />
+                {:else}
+                  <span class="font-mono text-sm {accountColor(acc.name)}">{leaf}</span>
+                {/if}
+              </div>
+              {#if acc.description}
+                <span class="text-xs text-slate-100" title={acc.description}>{acc.description}</span>
               {/if}
             </div>
             {#if depth === 0}

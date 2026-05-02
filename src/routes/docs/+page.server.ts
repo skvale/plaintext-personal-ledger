@@ -18,6 +18,7 @@ import {
   generateRulesFromCsvContent,
   parseRulesFile,
   saveRulesFile,
+  deleteDocument,
   type DocFolder
 } from '$lib/hledger.server.js';
 import { join, resolve } from 'node:path';
@@ -271,5 +272,17 @@ export const actions: Actions = {
     if (!result.success) return fail(500, { createRuleError: result.error ?? 'Save failed' });
 
     return { createdFromCsv: rulesName };
+  },
+
+  deleteDoc: async ({ request }) => {
+    const fd = await request.formData();
+    const relPath = (fd.get('relPath') as string | null) ?? '';
+
+    if (!relPath) return fail(400, { deleteError: 'No file specified' });
+
+    const result = await deleteDocument(relPath);
+    if (!result.success) return fail(400, { deleteError: result.error ?? 'Delete failed' });
+
+    return { deleted: true };
   }
 };
