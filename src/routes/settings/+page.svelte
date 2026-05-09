@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
   import SettingsSortableItem from '$lib/components/SettingsSortableItem.svelte';
@@ -22,9 +22,10 @@
     reconcile:    { label: 'Reconcile',     icon: '✓',  description: 'Match transactions against bank statements', href: '/reconcile' },
     triage:       { label: 'Triage',        icon: '⚑',  description: 'Review transactions and assign accounts', href: '/triage' },
     docs:         { label: 'Documents',     icon: '◻',  description: 'Statement files and CSV import', href: '/docs' },
-    mappings:     { label: 'Import Mappings', icon: '⊟',  description: 'Edit CSV import mappings (.rules files)', href: '/mappings' },
-    git:          { label: 'History',       icon: '⎇',  description: 'Transaction history and git diff viewer', href: '/git' },
-    check:        { label: 'Journal Check', icon: '✗',  description: 'Detect errors in the journal file', href: '/check' },
+mappings:     { label: 'Import Mappings', icon: '⊟', description: 'Edit CSV import mappings (.rules files)', href: '/mappings' },
+    reports:      { label: 'Reports',       icon: '◫', description: 'Run custom hledger commands and saved queries', href: '/reports' },
+    git:          { label: 'History',       icon: '⎇', description: 'Transaction history and git diff viewer', href: '/git' },
+    check:        { label: 'Journal Check', icon: '✗', description: 'Detect errors in the journal file', href: '/check' },
   };
 
   // Active sidebar items in current order
@@ -65,7 +66,7 @@
     fd.set('order', JSON.stringify(activeIds));
     await fetch('?/reorder', { method: 'POST', body: fd });
     saving = false;
-    await invalidateAll();
+    window.location.reload();
   }
 
   let learningEnabled = $state(false);
@@ -174,7 +175,7 @@
       method="POST"
       action="?/setDisplay"
       use:enhance={() => async ({ result }) => {
-        if (result.type === 'success') await invalidateAll();
+        if (result.type === 'success') window.location.reload();
       }}
       class="rounded-lg border border-slate-400 bg-slate-900 p-4 space-y-4"
     >
@@ -225,7 +226,7 @@
       method="POST"
       action="?/setLearning"
       use:enhance={() => async ({ result }) => {
-        if (result.type === 'success') await invalidateAll();
+        if (result.type === 'success') window.location.reload();
       }}
       class="rounded-lg border border-slate-400 bg-slate-900 p-4 space-y-4"
     >
@@ -306,7 +307,7 @@
       method="POST"
       action="?/setImport"
       use:enhance={() => async ({ result }) => {
-        if (result.type === 'success') await invalidateAll();
+        if (result.type === 'success') window.location.reload();
       }}
       class="rounded-lg border border-slate-400 bg-slate-900 p-4 space-y-4"
     >
@@ -344,7 +345,7 @@
       method="POST"
       action="?/save"
       use:enhance={() => async ({ result }) => {
-        if (result.type === 'success') await invalidateAll();
+        if (result.type === 'success') window.location.reload();
       }}
       class="space-y-3"
     >

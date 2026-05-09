@@ -123,13 +123,13 @@
         class="mt-4 rounded-lg bg-slate-800 p-4 font-mono text-base text-slate-100 space-y-2"
       >
         <p class="text-slate-100"># macOS (Homebrew)</p>
-        <p>brew install hledger@1.52</p>
+        <p class="text-slate-100">brew install hledger@1.52</p>
         <p class="text-slate-100 mt-3"># Linux / WSL</p>
-        <p>curl -sO https://hledger.org/install.sh && bash install.sh</p>
+        <p class="text-slate-100">curl -sO https://hledger.org/install.sh && bash install.sh</p>
         <p class="text-slate-100 mt-3"># Via Stack (any version)</p>
-        <p>stack install hledger-1.52</p>
+        <p class="text-slate-100">stack install hledger-1.52</p>
         <p class="text-slate-100 mt-3"># Verify</p>
-        <p>hledger --version</p>
+        <p class="text-slate-100">hledger --version</p>
       </div>
       <p class="mt-3 text-base text-slate-100">
         Requires hledger 1.40+. Once installed, restart the dev server.

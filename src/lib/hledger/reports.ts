@@ -599,6 +599,7 @@ export async function getUnrealizedGains(): Promise<UnrealizedGains> {
     return fmt(d);
   };
   const ytdStart = `${now.getFullYear()}-01-01`;
+  const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
   const range = lastNMonths(13);
   async function getUnrealized(pattern: string, period?: string): Promise<number> {
@@ -611,7 +612,7 @@ export async function getUnrealizedGains(): Promise<UnrealizedGains> {
   const [total, ytd, m1, m3, m6, m12, monthlyJson] = await Promise.all([
     getUnrealized("equity:unrealized"),
     getUnrealized("equity:unrealized", `${ytdStart}..`),
-    getUnrealized("equity:unrealized", `${monthsAgo(1)}..`),
+    getUnrealized("equity:unrealized", `${thisMonthStart}..`),
     getUnrealized("equity:unrealized", `${monthsAgo(3)}..`),
     getUnrealized("equity:unrealized", `${monthsAgo(6)}..`),
     getUnrealized("equity:unrealized", `${monthsAgo(12)}..`),
@@ -620,7 +621,7 @@ export async function getUnrealizedGains(): Promise<UnrealizedGains> {
   const [incTotal, incYtd, incM1, incM3, incM6, incM12, incMonthlyJson] = await Promise.all([
     getUnrealized("income:unrealized"),
     getUnrealized("income:unrealized", `${ytdStart}..`),
-    getUnrealized("income:unrealized", `${monthsAgo(1)}..`),
+    getUnrealized("income:unrealized", `${thisMonthStart}..`),
     getUnrealized("income:unrealized", `${monthsAgo(3)}..`),
     getUnrealized("income:unrealized", `${monthsAgo(6)}..`),
     getUnrealized("income:unrealized", `${monthsAgo(12)}..`),

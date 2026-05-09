@@ -20,7 +20,7 @@ export async function getHledgerVersion(): Promise<{
 } | null> {
   try {
     const { stdout } = await execAsync("hledger --version");
-    const match = stdout.match(/hledger\s+(\d+\.\d+)/);
+    const match = stdout.match(/hledger\s+(\d+\.\d+\.\d+)/);
     if (!match)
       return {
         version: stdout.trim(),

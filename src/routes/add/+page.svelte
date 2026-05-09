@@ -27,27 +27,38 @@
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // Local state for form fields - persists when accounts are selected
-  let vendor = $state('');
-  let note = $state('');
-
-  // Initialize from form data (on validation failure)
-  $effect(() => {
-    if (form?.vendor !== undefined) vendor = form.vendor;
-    if (form?.note !== undefined) note = form.note;
-  });
-
   interface Posting {
     id: string;
     account: string;
     amount: string;
   }
 
-  let nextId = 3;
-  let postings = $state<Posting[]>([
-    { id: '1', account: '', amount: '' },
-    { id: '2', account: '', amount: '' }
-  ]);
+  // Prefill from query params (used by duplicate)
+  const prefillVendor = $page.url.searchParams.get('vendor') ?? '';
+  const prefillNote = $page.url.searchParams.get('note') ?? '';
+  const prefillPostings = $page.url.searchParams.getAll('p');
+
+  let vendor = $state(prefillVendor);
+  let note = $state(prefillNote);
+
+  let nextId = $state(prefillPostings.length > 0 ? prefillPostings.length + 1 : 3);
+  let postings = $state<Posting[]>(
+    prefillPostings.length > 0
+      ? prefillPostings.map((p, i) => {
+          const [account, amount] = p.split('|');
+          return { id: String(i + 1), account: account ?? '', amount: amount ?? '' };
+        })
+      : [
+          { id: '1', account: '', amount: '' },
+          { id: '2', account: '', amount: '' },
+        ]
+  );
+
+  // Initialize from form data (on validation failure)
+  $effect(() => {
+    if (form?.vendor !== undefined) vendor = form.vendor;
+    if (form?.note !== undefined) note = form.note;
+  });
 
   function addPosting() {
     postings = [...postings, { id: String(nextId++), account: '', amount: '' }];

@@ -1,7 +1,8 @@
 import { getUncategorizedCount, checkJournal, getSettings, getDefaultCommodity, isHledgerAvailable } from '$lib/hledger.server.js';
 import type { ServerLoad } from '@sveltejs/kit';
 
-export const load: ServerLoad = async () => {
+export const load: ServerLoad = async ({ depends }) => {
+  depends('settings:layout');
   const hledgerOk = await isHledgerAvailable();
   if (!hledgerOk) {
     const settings = await getSettings();

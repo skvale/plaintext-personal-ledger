@@ -120,6 +120,23 @@
     return `/tx/${id}/edit?ref=${encodeURIComponent(ref)}`;
   });
 
+  // Duplicate link: prefill /add with vendor, note, and postings (strip balance assertions, strip auto postings)
+  const duplicateHref = $derived(() => {
+    const params = new URLSearchParams();
+    params.set('vendor', vendor);
+    if (note) params.set('note', note);
+    for (const p of data.txn.postings) {
+      const rawAmt = p.amount.replace(/\s*=\s*.*$/, '').trim();
+      const num = parseFloat(rawAmt.replace(/[$,]/g, ''));
+      if (!isNaN(num)) {
+        params.append('p', `${p.account}|${rawAmt}`);
+      } else {
+        params.append('p', `${p.account}|`);
+      }
+    }
+    return `/add?${params.toString()}`;
+  });
+
   // Only show "View all from" link for vendor transactions (has expense or income postings)
   const isVendorTxn = $derived(
     data.txn.postings.some((p: { account: string }) =>
@@ -201,6 +218,10 @@
       href={editHref()}
       class="btn-edit"
     ><svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>Edit</a>
+    <a
+      href={duplicateHref()}
+      class="btn-edit"
+    ><svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplicate</a>
     <button
       onclick={() => (showDeleteConfirm = true)}
       class="btn-delete"

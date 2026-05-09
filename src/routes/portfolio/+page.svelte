@@ -150,7 +150,7 @@
     </p>
   </div>
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-4">
-    <p class="mb-2 text-xs font-semibold tracking-wide text-slate-100">Last Month</p>
+    <p class="mb-2 text-xs font-semibold tracking-wide text-slate-100">This Month</p>
     <p class="text-xl font-medium {data.gains.periods.m1 >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
       {fmtSigned(data.gains.periods.m1)}
     </p>
