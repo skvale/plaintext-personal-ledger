@@ -111,6 +111,7 @@
   let isLoading = $state(false);
   let unmappedDescs = $state<string[]>([]);
   let mappingEdits = $state<Record<string, string>>({});
+  let patternEdits = $state<Record<string, string>>({});
   let suggestedAccounts = $state<Record<string, string>>({});
   const filledMappingCount = $derived(Object.values(mappingEdits).filter(v => v).length);
 
@@ -349,6 +350,11 @@
             if (stillUnmapped.has(desc)) keptEdits[desc] = val;
           }
           mappingEdits = keptEdits;
+          const keptPatterns: Record<string, string> = {};
+          for (const [desc, val] of Object.entries(patternEdits)) {
+            if (stillUnmapped.has(desc)) keptPatterns[desc] = val;
+          }
+          patternEdits = keptPatterns;
           suggestedAccounts = {};
           for (const [desc, s] of Object.entries(suggestions)) {
             suggestedAccounts[desc] = s.account;
@@ -551,7 +557,15 @@
                 {#each unmappedDescs as desc}
                   {@const suggestion = suggestedAccounts[desc]}
                   <tr>
-                    <td class="py-1 pr-3 font-mono text-slate-100 truncate max-w-0">{desc}</td>
+                    <td class="py-1 pr-3 font-mono text-slate-100 truncate max-w-0">
+                      <input
+                        type="text"
+                        value={patternEdits[desc] ?? desc}
+                        oninput={(e) => { patternEdits[desc] = (e.currentTarget as HTMLInputElement).value; patternEdits = patternEdits; }}
+                        class="w-full border border-slate-300 rounded-md bg-slate-900 px-2 py-1 font-mono text-sm text-slate-100 outline-none focus:border-blue-300"
+                        title="Edit the pattern used for this rule"
+                      />
+                    </td>
                     <td class="py-1 pl-3" style="width: 240px;">
                       <Combobox
                         items={allAccounts}
@@ -589,7 +603,7 @@
                   await persistNewAccounts();
                   const mappings = Object.entries(mappingEdits)
                     .filter(([, v]) => v)
-                    .map(([pattern, account]) => ({ pattern, account }));
+                    .map(([desc, account]) => ({ pattern: patternEdits[desc] ?? desc, account }));
                   const fd = new FormData();
                   fd.set('rulesFile', selectedRulesFile);
                   fd.set('mappings', JSON.stringify(mappings));

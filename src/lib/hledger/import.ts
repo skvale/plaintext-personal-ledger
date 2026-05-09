@@ -517,8 +517,6 @@ export function serializeRulesFile({ header, items }: ParsedRulesFile): string {
         for (const a of item.assignments) {
           out.push(` ${a.key} ${a.value}`);
         }
-      } else if (item.account) {
-        out.push(` account2 ${item.account}`);
       }
       out.push("");
     }
@@ -552,12 +550,21 @@ export async function appendRule(
         duplicate: true,
         error: `Pattern already exists in ${filename}`,
       };
+
+    // Determine which accountN key is the classification slot (the one defaulting to expenses:unknown)
+    const headerLines = parsed.header.split("\n");
+    let classificationKey = "account1"; // fallback
+    for (const line of headerLines) {
+      const m = line.match(/^(account\d+)\s+expenses:unknown\s*(?:;.*)?$/);
+      if (m) { classificationKey = m[1]; break; }
+    }
+
     parsed.items.push({
       type: "rule",
       id: `r${Date.now()}`,
       patterns,
       account,
-      assignments: [{ key: "account2", value: account }],
+      assignments: [{ key: classificationKey, value: account }],
     });
     return saveRulesFile(filename, parsed);
   } catch (e: any) {
