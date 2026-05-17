@@ -180,8 +180,13 @@ export const actions: Actions = {
       for (const block of txBlocks) {
         if (block.includes('expenses:unknown') || block.includes('income:unknown')) {
           const firstLine = block.split('\n')[0]?.trim() ?? '';
-          // Extract description: "2026-03-15 WHOLE FOODS" → "WHOLE FOODS"
-          const desc = firstLine.replace(/^\d{4}-\d{2}-\d{2}\s*/, '').replace(/\s*\|.*$/, '').trim();
+          // Extract description: "2026-03-15 * WHOLE FOODS" → "WHOLE FOODS"
+          // Strip date, optional cleared/pending marker (* or !), and payee|note separator
+          const desc = firstLine
+            .replace(/^\d{4}-\d{2}-\d{2}\s*/, '')
+            .replace(/^[*!]\s*/, '')
+            .replace(/\s*\|.*$/, '')
+            .trim();
           if (desc && !unmapped.includes(desc)) unmapped.push(desc);
         }
       }

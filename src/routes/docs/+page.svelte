@@ -599,6 +599,7 @@
             {#if filledMappingCount > 0}
               <button
                 type="button"
+                disabled={isLoading}
                 onclick={async () => {
                   await persistNewAccounts();
                   const mappings = Object.entries(mappingEdits)
@@ -607,11 +608,53 @@
                   const fd = new FormData();
                   fd.set('rulesFile', selectedRulesFile);
                   fd.set('mappings', JSON.stringify(mappings));
-                  await fetch('?/addMappings', { method: 'POST', body: fd });
+                  const saveRes = await fetch('?/addMappings', { method: 'POST', body: fd });
+                  const saveJson = await saveRes.json();
+                  const saveData = saveJson?.data ? (typeof saveJson.data === 'string' ? JSON.parse(saveJson.data) : saveJson.data) : null;
+                  if (saveData?.mappingError) {
+                    previewError = saveData.mappingError;
+                    return;
+                  }
                   // Re-preview to see updated results
-                  document.querySelector<HTMLFormElement>('#previewForm')?.requestSubmit();
+                  if (!importingFile) return;
+                  isLoading = true;
+                  previewError = '';
+                  const pfd = new FormData();
+                  pfd.set('csvRel', importingFile.relPath);
+                  pfd.set('rulesFile', selectedRulesFile);
+                  const res = await fetch('?/preview', { method: 'POST', body: pfd });
+                  const json = await res.json();
+                  const pData = json?.data ? (typeof json.data === 'string' ? JSON.parse(json.data) : json.data) : null;
+                  isLoading = false;
+                  if (!pData || pData.previewError) {
+                    previewError = pData?.previewError ?? 'Preview failed.';
+                    return;
+                  }
+                  previewOutput = pData.preview ?? '';
+                  previewCount = pData.previewCount ?? 0;
+                  previewToken = pData.token ?? '';
+                  unmappedDescs = pData.unmapped ?? [];
+                  const suggestions: Record<string, { account: string }> = pData.suggestions ?? {};
+                  const stillUnmapped = new Set(unmappedDescs);
+                  const keptEdits: Record<string, string> = {};
+                  for (const [desc, val] of Object.entries(mappingEdits)) {
+                    if (stillUnmapped.has(desc)) keptEdits[desc] = val;
+                  }
+                  mappingEdits = keptEdits;
+                  const keptPatterns: Record<string, string> = {};
+                  for (const [desc, val] of Object.entries(patternEdits)) {
+                    if (stillUnmapped.has(desc)) keptPatterns[desc] = val;
+                  }
+                  patternEdits = keptPatterns;
+                  suggestedAccounts = {};
+                  for (const [desc, s] of Object.entries(suggestions)) {
+                    suggestedAccounts[desc] = s.account;
+                  }
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('preview', '1');
+                  pushState(url, {});
                 }}
-                class="rounded-md bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/20"
+                class="rounded-md bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Save {filledMappingCount} mapping{filledMappingCount === 1 ? '' : 's'} and re-preview
               </button>

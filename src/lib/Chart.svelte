@@ -6,6 +6,7 @@
 
   let canvas: HTMLCanvasElement;
   let chart = $state<import('chart.js').Chart | undefined>(undefined);
+  let ChartJS: typeof import('chart.js').Chart | undefined;
 
   // Inject maintainAspectRatio: false when a fixed height is specified
   const resolvedConfig = $derived.by(() => {
@@ -17,15 +18,22 @@
   });
 
   onMount(() => {
-    import('chart.js').then(({ Chart: ChartJS, registerables }) => {
-      ChartJS.register(...registerables);
-      chart = new ChartJS(canvas, resolvedConfig);
+    import('chart.js').then(({ Chart: CJS, registerables }) => {
+      CJS.register(...registerables);
+      ChartJS = CJS;
+      chart = new CJS(canvas, resolvedConfig);
     });
     return () => chart?.destroy();
   });
 
   $effect(() => {
-    if (!chart) return;
+    if (!chart || !ChartJS) return;
+    // If chart type changed, destroy and recreate — Chart.js doesn't support type mutation
+    if ((chart.config as any).type !== resolvedConfig.type) {
+      chart.destroy();
+      chart = new ChartJS(canvas, resolvedConfig);
+      return;
+    }
     chart.data = resolvedConfig.data;
     // Sync options so theme changes (grid/tick colors) take effect
     (chart as any).options = resolvedConfig.options;

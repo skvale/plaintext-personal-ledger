@@ -36,24 +36,42 @@
   const tableFooter = $derived(mm ? { label: 'Net Income', amounts: mm.netTotals } : undefined);
 
   // Chart
+  const isMultiMonth = $derived(monthCount > 1);
+
   const barChartConfig = $derived({
-    type: 'bar' as const,
+    type: isMultiMonth ? 'line' as const : 'bar' as const,
     data: {
       labels: (data.monthly || []).map((d) => d.month),
       datasets: [
         {
           label: 'Income',
           data: (data.monthly || []).map((d) => d.income),
-          backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(5, 150, 105, 0.65)',
-          hoverBackgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.9)' : 'rgba(5, 150, 105, 0.85)',
-          borderRadius: 4, borderSkipped: false, order: 1
+          ...(isMultiMonth ? {
+            borderColor: theme.isDark ? 'rgba(16, 185, 129, 0.9)' : 'rgba(5, 150, 105, 0.9)',
+            backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(5, 150, 105, 0.1)',
+            pointBackgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.9)' : 'rgba(5, 150, 105, 0.9)',
+            fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
+          } : {
+            backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(5, 150, 105, 0.65)',
+            hoverBackgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.9)' : 'rgba(5, 150, 105, 0.85)',
+            borderRadius: 4, borderSkipped: false,
+          }),
+          order: 1
         },
         {
           label: 'Expenses',
           data: (data.monthly || []).map((d) => d.expenses),
-          backgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.7)' : 'rgba(224, 42, 74, 0.65)',
-          hoverBackgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.9)' : 'rgba(224, 42, 74, 0.85)',
-          borderRadius: 4, borderSkipped: false, order: 2
+          ...(isMultiMonth ? {
+            borderColor: theme.isDark ? 'rgba(244, 63, 94, 0.9)' : 'rgba(224, 42, 74, 0.9)',
+            backgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.15)' : 'rgba(224, 42, 74, 0.1)',
+            pointBackgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.9)' : 'rgba(224, 42, 74, 0.9)',
+            fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
+          } : {
+            backgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.7)' : 'rgba(224, 42, 74, 0.65)',
+            hoverBackgroundColor: theme.isDark ? 'rgba(244, 63, 94, 0.9)' : 'rgba(224, 42, 74, 0.85)',
+            borderRadius: 4, borderSkipped: false,
+          }),
+          order: 2
         }
       ]
     },

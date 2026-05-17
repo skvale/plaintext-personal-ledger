@@ -12,6 +12,16 @@
 
 
   let filter = $state('');
+  let scrollEl = $state<HTMLElement | null>(null);
+
+  $effect(() => {
+    // Re-run when monthCount changes (read it to track dependency)
+    const _ = monthCount;
+    if (!scrollEl) return;
+    const el = scrollEl;
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.scrollLeft = el.scrollWidth; }));
+    setTimeout(() => { el.scrollLeft = el.scrollWidth; }, 150);
+  });
 
   const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
   const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
@@ -86,11 +96,11 @@
 {#if filteredMm && filteredMm.months.length > 1}
   <!-- Multi-month table -->
   <div class="rounded-xl border border-slate-400 bg-slate-900 overflow-hidden">
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto" bind:this={scrollEl}>
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-slate-400 text-left">
-            <th class="px-4 py-3 font-medium text-slate-100 whitespace-nowrap">Vendor</th>
+            <th class="px-4 py-3 font-medium text-slate-100 sticky left-0 bg-slate-900 z-10 max-w-[350px] w-[350px]">Vendor</th>
             {#each filteredMm.months as month}
               <th class="px-4 py-3 font-medium text-slate-100 text-right whitespace-nowrap">{fmtMonth(month)}</th>
             {/each}
@@ -104,10 +114,10 @@
               class="group border-b border-black/[0.08] dark:border-white/[0.06] transition-colors hover:bg-slate-800/50"
             >
               <Tooltip.Root>
-                <Tooltip.Trigger class="px-4 py-2.5 whitespace-nowrap text-left">
+                <Tooltip.Trigger class="px-4 py-2.5 text-left sticky left-0 bg-slate-900 group-hover:bg-slate-800/50 max-w-[350px] w-[350px] overflow-hidden">
                   <a
                     href="/register?q={encodeURIComponent(p.vendor)}&from="
-                    class="text-slate-100 hover:text-blue-500 group-hover:underline underline-offset-2 transition-colors"
+                    class="text-slate-100 hover:text-blue-500 group-hover:underline underline-offset-2 transition-colors block truncate"
                   >{p.vendor}</a>
                 </Tooltip.Trigger>
                 {#if p.amounts.some((a: number) => a > 0)}

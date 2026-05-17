@@ -473,6 +473,9 @@ export function parseRulesFile(content: string): ParsedRulesFile {
           const val = t.slice(spaceIdx + 1).trim();
           assignments.push({ key, value: val });
           if (/^account\d*$/.test(key) && !account) account = val;
+        } else if (t) {
+          // bare keyword with no value (e.g. "skip" inside an if block)
+          assignments.push({ key: t, value: "" });
         }
         j++;
       }
@@ -515,7 +518,7 @@ export function serializeRulesFile({ header, items }: ParsedRulesFile): string {
       out.push(`if ${item.patterns ?? ""}`);
       if (item.assignments && item.assignments.length > 0) {
         for (const a of item.assignments) {
-          out.push(` ${a.key} ${a.value}`);
+          out.push(a.value ? ` ${a.key} ${a.value}` : ` ${a.key}`);
         }
       }
       out.push("");

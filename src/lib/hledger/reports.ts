@@ -687,13 +687,13 @@ export async function getVendors(): Promise<
   { vendor: string; count: number; total: number; lastDate: string }[]
 > {
   const now = new Date();
-  const threeYearsAgo = new Date();
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const since = threeYearsAgo.toISOString().slice(0, 10);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
     .slice(0, 10);
-  const raw = await runJson<any[]>(["print", "-p", `${since}..${endOfMonth}`]);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    .toISOString()
+    .slice(0, 10);
+  const raw = await runJson<any[]>(["print", "-p", `${start}..${end}`]);
   if (!raw) return [];
   const map = new Map<
     string,
