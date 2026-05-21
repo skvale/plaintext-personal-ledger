@@ -167,7 +167,7 @@
   ];
 
   const expenseTotal = $derived((data.expenseCategories || []).reduce((s: number, c: any) => s + c.amount, 0));
-  const maxExpense = $derived(Math.max(...(data.expenseCategories || []).map((c: any) => c.amount), 1));
+  const maxExpense = $derived(Math.max(...(data.expenseCategories || []).map((c: any) => Math.abs(c.amount)), 1));
 </script>
 
 <LearningBanner id="dashboard" title="Quick tips" tips={dashboardTips} />
@@ -207,7 +207,7 @@
   <div class="glass-card relative overflow-hidden rounded-xl border border-slate-400 p-4">
     <div class="sparkline-wrap"><canvas bind:this={sparkExp}></canvas></div>
     <p class="relative mb-2 text-xs font-semibold tracking-wide text-slate-100">Expenses</p>
-    <p class="relative text-xl font-medium text-rose-400 glow-rose"><Amount value={data.monthSummary.expenses} /></p>
+    <p class="relative text-xl font-medium {data.monthSummary.expenses < 0 ? 'text-emerald-400 glow-emerald' : 'text-rose-400 glow-rose'}"><Amount value={Math.abs(data.monthSummary.expenses)} /></p>
   </div>
 
   <!-- Savings Rate -->
@@ -228,18 +228,19 @@
     {#if data.expenseCategories && data.expenseCategories.length > 0}
       <div class="flex flex-col gap-2.5">
         {#each data.expenseCategories as cat, i}
-          {@const pct = expenseTotal > 0 ? (cat.amount / expenseTotal * 100) : 0}
-          {@const barPct = (cat.amount / maxExpense) * 100}
+          {@const pct = expenseTotal !== 0 ? (cat.amount / Math.abs(expenseTotal) * 100) : 0}
+          {@const barPct = (Math.abs(cat.amount) / maxExpense) * 100}
+          {@const isNet = cat.amount < 0}
           <div class="flex items-center gap-2.5">
             <span class="w-[72px] shrink-0 truncate text-sm text-slate-100">{cat.shortName}</span>
             <div class="relative flex-1 h-5 rounded-md overflow-hidden bg-slate-800/50">
               <div
                 class="absolute inset-y-0 left-0 rounded-md transition-all"
-                style="width: {barPct}%; background: {categoryColors[i % categoryColors.length]}; opacity: 0.7;"
+                style="width: {barPct}%; background: {isNet ? '#34d399' : categoryColors[i % categoryColors.length]}; opacity: 0.7;"
               ></div>
             </div>
-            <span class="shrink-0 font-mono text-xs text-slate-100 w-8 text-right">{pct.toFixed(0)}%</span>
-            <span class="shrink-0 font-mono text-sm tabular-nums text-slate-100 w-20 text-right">{fmt(cat.amount)}</span>
+            <span class="shrink-0 font-mono text-xs w-8 text-right {isNet ? 'text-emerald-400' : 'text-slate-100'}">{pct.toFixed(0)}%</span>
+            <span class="shrink-0 font-mono text-sm tabular-nums w-20 text-right {isNet ? 'text-emerald-400' : 'text-slate-100'}">{fmt(cat.amount)}</span>
           </div>
         {/each}
       </div>

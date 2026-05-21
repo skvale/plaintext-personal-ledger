@@ -71,11 +71,15 @@ export function accountSortKey(acct: string): number {
 /** Color for an amount based on its account context */
 export function amountColor(amount: number, acct: string): string {
   if (amount === 0) return "text-slate-100";
-  if (acct.startsWith("expenses")) return "text-rose-400";
-  if (acct.startsWith("income")) return amount > 0 ? "text-rose-400" : "text-emerald-400";
-  if (acct.startsWith("assets"))
-    return amount > 0 ? "text-blue-500" : "text-rose-400";
-  if (acct.startsWith("liabilities"))
-    return amount > 0 ? "text-slate-100" : "text-amber-400";
+  const t = accountType(acct);
+  // Money flowing out = rose, money flowing in = emerald
+  // expenses: positive = out, negative = in (reimbursement)
+  // income:   negative = in, positive = out (reversal)
+  // assets:   positive = in, negative = out
+  // liabilities: positive = owed more (neutral/amber), negative = paid down (emerald)
+  if (t === "expenses") return amount > 0 ? "text-rose-400" : "text-emerald-400";
+  if (t === "income")   return amount < 0 ? "text-emerald-400" : "text-rose-400";
+  if (t === "assets")   return amount > 0 ? "text-emerald-400" : "text-rose-400";
+  if (t === "liabilities") return amount > 0 ? "text-amber-400" : "text-emerald-400";
   return "text-slate-100";
 }

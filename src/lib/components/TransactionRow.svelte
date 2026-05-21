@@ -51,8 +51,8 @@
   {href}
   class="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-800/60"
 >
-  <span class="w-12 shrink-0 text-xs text-slate-100">{fmtDate(date)}</span>
   <div class="min-w-0 flex-1 overflow-hidden">
+    <p class="text-[10px] text-slate-500 mb-0.5">{fmtDate(date)}</p>
     <p class="truncate text-sm font-medium text-slate-100">{description}</p>
     {#if sorted.length >= 2}
       <div class="group/acct relative flex flex-col gap-0.5 min-w-0 overflow-hidden">

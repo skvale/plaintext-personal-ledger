@@ -44,7 +44,7 @@ export async function getMonthSummary(
   const exp = findSubreport(subs, /expense/i);
   return {
     income: Math.abs(pickAmount(rev?.[1].prTotals?.prrAmounts)),
-    expenses: Math.abs(pickAmount(exp?.[1].prTotals?.prrAmounts)),
+    expenses: pickAmount(exp?.[1].prTotals?.prrAmounts),
   };
 }
 
@@ -65,10 +65,10 @@ export async function getExpenseCategories(
   return rows
     .map((row) => {
       const name: string = row[0] ?? "";
-      const amount = Math.abs(pickAmount(row[3]));
+      const amount = pickAmount(row[3]);
       return { name, shortName: name.split(":").pop() ?? name, amount };
     })
-    .filter((c) => c.amount > 0 && c.name !== "expenses")
+    .filter((c) => c.amount !== 0 && c.name !== "expenses")
     .sort((a, b) => b.amount - a.amount);
 }
 

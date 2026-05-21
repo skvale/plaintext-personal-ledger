@@ -171,7 +171,7 @@
       const matchingPostings = account
         ? txn.postings.filter(p => p.account === account || p.account.startsWith(account + ':'))
         : txn.postings.filter(p => p.account.startsWith('expenses'));
-      return sum + matchingPostings.reduce((s, p) => s + Math.abs(p.amount), 0);
+      return sum + matchingPostings.reduce((s, p) => s + p.amount, 0);
     }, 0)
   );
 
@@ -231,15 +231,18 @@
     {#if hasFilters && account && isBalanceAccount}
       <span class="text-slate-100">·</span>
       <span class="text-sm {currentBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}">{fmt(currentBalance)} <span class="font-sans text-xs text-slate-100">balance</span></span>
-    {:else if hasFilters && filteredTotal > 0}
+    {:else if hasFilters && filteredTotal !== 0}
       <span class="text-slate-100">·</span>
-      <span class="text-sm text-rose-400">{fmt(filteredTotal)} <span class="font-sans text-xs text-slate-100">{account || 'expenses'}</span></span>
+      <span class="text-sm {amountColor(filteredTotal, account || 'expenses')}">{fmt(filteredTotal)} <span class="font-sans text-xs text-slate-100">{account || 'expenses'}</span></span>
     {/if}
     {#if data.isDefaultView}
       <span class="text-xs text-slate-100">· <button class="underline underline-offset-2 hover:text-slate-100" onclick={showThisMonth}>show this month</button></span>
     {/if}
   </div>
   <div class="flex items-center gap-2">
+    <div class="{periodMode === 'all' ? 'invisible' : ''}">
+      <PeriodStepper label={periodLabel} onprev={() => navigatePeriod(-1)} onnext={() => navigatePeriod(1)} />
+    </div>
     <div class="flex items-center gap-1">
       {#each [['month','Month'],['year','Year'],['all','All']] as [mode, label]}
         <button
@@ -248,9 +251,6 @@
         >{label}</button>
       {/each}
     </div>
-    {#if periodMode !== 'all'}
-      <PeriodStepper label={periodLabel} onprev={() => navigatePeriod(-1)} onnext={() => navigatePeriod(1)} />
-    {/if}
     <button
       class="btn-secondary"
       onclick={clearFilters}
@@ -416,10 +416,12 @@
         </div>
         <div class="px-3 py-2 text-sm text-right whitespace-nowrap">
           {#if true}
-            {@const posPostings = vis.filter(p => p.amount > 0)}
-            {@const totalAmt = posPostings.reduce((s, p) => s + p.amount, 0)}
-            {@const amtAccount = posPostings.length === 1 ? posPostings[0].account : (primary?.account ?? '')}
-            <Amount value={totalAmt} class={amountColor(totalAmt, amtAccount)} />
+            {@const matchPostings = account
+              ? vis.filter(p => p.account === account || p.account.startsWith(account + ':'))
+              : vis.filter(p => p.amount > 0)}
+            {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
+            {@const amtAccount = matchPostings.length === 1 ? matchPostings[0].account : (account || (primary?.account ?? ''))}
+            <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount)} />
           {/if}
         </div>
       </a>

@@ -499,7 +499,13 @@
         {#if equationParts.equity !== 0}
           Opening balances — this is the starting snapshot of your accounts. The Equity account is just the balancing entry that makes the numbers work.
         {:else if equationParts.assets !== 0 && equationParts.expenses !== 0 && equationParts.income === 0 && equationParts.liabilities === 0}
-          You spent <Amount precise value={Math.abs(equationParts.assets)} /> from your accounts on expenses. Assets went down, Expenses went up — still balanced.
+          {#if equationParts.assets < 0 && equationParts.expenses > 0}
+            You spent <Amount precise value={Math.abs(equationParts.assets)} /> from your accounts on expenses. Assets went down, Expenses went up — still balanced.
+          {:else if equationParts.assets > 0 && equationParts.expenses < 0}
+            You were reimbursed <Amount precise value={Math.abs(equationParts.assets)} /> — Expenses went down, Assets went up — still balanced.
+          {:else}
+            Money moved between Assets and Expenses. Still balanced.
+          {/if}
         {:else if equationParts.assets !== 0 && equationParts.income !== 0 && equationParts.expenses === 0 && equationParts.liabilities === 0}
           You received <Amount precise value={Math.abs(equationParts.income)} /> in income. Assets went up, Income recorded where it came from — still balanced.
         {:else if equationParts.assets !== 0 && equationParts.liabilities !== 0 && equationParts.expenses !== 0}
