@@ -88,6 +88,7 @@
         absAmount: Math.abs(amount),
         isDebit: amount > 0,
         assertion: p.assertion,
+        assertionNum: p.assertionNum,
         isBalanceAssignment: p.isBalanceAssignment,
         isAuto,
       };
@@ -265,7 +266,7 @@
           </div>
           <span class="shrink-0 font-mono text-sm tabular-nums">
             {#if p.isBalanceAssignment}
-              <span class="text-slate-100">= </span><span class="text-slate-100">{p.assertion}</span>
+              <span class="text-slate-100">= </span><span class="text-slate-100">{#if p.assertionNum != null}<Amount precise value={p.assertionNum} />{:else}{p.assertion}{/if}</span>
             {:else if hasBalanceAssignment && p.amount === 0}
               <span class="text-slate-100 italic">auto</span>
             {:else}
