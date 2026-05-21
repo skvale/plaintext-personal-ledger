@@ -45,11 +45,8 @@
   }
 
   let editPostings = $state<Posting[]>(initPostings());
-  $effect(() => { editPostings = initPostings(); });
-
-  let editVendor = $state('');
-  let editNote = $state('');
-  $effect(() => { editVendor = vendor; editNote = note; });
+  let editVendor = $state(vendor);
+  let editNote = $state(note);
   let submitting = $state(false);
 
   function addPosting() {

@@ -36,8 +36,8 @@
     },
     register: { href: "/register", label: "Register", icon: "≡", key: "g r" },
     accounts: { href: "/accounts", label: "Accounts", icon: "◉", key: "g a" },
-    balancesheet: { href: "/balancesheet", label: "Balance Sheet", icon: "⊞" },
-    pnl: { href: "/income", label: "P&L", icon: "↑↓" },
+    balancesheet: { href: "/balancesheet", label: "Balance Sheet", icon: "⊞", key: "g n" },
+    pnl: { href: "/income", label: "P&L", icon: "↑↓", key: "g i" },
     cashflow: { href: "/cashflow", label: "Cash Flow", icon: "⇅" },
     budget: { href: "/budget", label: "Budget", icon: "◎", key: "g b" },
     portfolio: {
@@ -392,14 +392,6 @@
 
       if (inInput) return;
 
-      if (e.key === "n") {
-        showHelp = false;
-        goto(
-          `/add?from=${encodeURIComponent(window.location.pathname + window.location.search)}`,
-        );
-        return;
-      }
-
       if (e.key === "g") {
         gDown = true;
         clearTimeout(gTimer);
@@ -417,6 +409,15 @@
           gDown = false;
           clearTimeout(gTimer);
         }
+        return;
+      }
+
+      if (e.key === "n") {
+        showHelp = false;
+        goto(
+          `/add?from=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+        );
+        return;
       }
     };
 

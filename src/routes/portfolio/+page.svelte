@@ -212,12 +212,14 @@
     {:else}
       <div class="flex flex-col gap-1">
         {#each data.recentTxns as txn}
-          {@const investPosting = txn.postings.find((p: any) => p.account.startsWith('assets:investments'))}
+          {@const investPostings = txn.postings.filter((p: any) => p.account.startsWith('assets:investments'))}
+          {@const investPosting = investPostings[0]}
+          {@const investTotal = investPostings.reduce((s: number, p: any) => s + p.amount, 0)}
           <TransactionRow
             date={txn.date}
             description={txn.description}
             account={investPosting?.account}
-            amount={investPosting?.amount ?? 0}
+            amount={investTotal}
             href={(txn.txid || txn.tindex) ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/portfolio')}` : undefined}
             signed
           />

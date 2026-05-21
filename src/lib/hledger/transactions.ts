@@ -222,6 +222,18 @@ export async function addAccountDeclaration(
 ): Promise<{ success: boolean; error?: string }> {
   const { readFile, writeFile } = await import("node:fs/promises");
   const JOURNAL = MAIN_JOURNAL;
+
+  // Check if hledger already knows this account (used or declared anywhere in journal tree)
+  const [usedOut, declaredOut] = await Promise.all([
+    run(["-I", "accounts", "--used"]),
+    run(["-I", "accounts", "--declared"]),
+  ]);
+  const knownAccounts = new Set([
+    ...usedOut.split("\n").filter(Boolean),
+    ...declaredOut.split("\n").filter(Boolean).map(l => l.replace(/\s*;.*$/, "").trim()),
+  ]);
+  if (knownAccounts.has(name)) return { success: true };
+
   const content = await readFile(JOURNAL, "utf-8");
   // Insert after the last existing account declaration, or at top after comments
   const lines = content.split("\n");
@@ -229,7 +241,7 @@ export async function addAccountDeclaration(
   for (let i = 0; i < lines.length; i++) {
     if (/^account\s+/.test(lines[i])) lastAccountLine = i;
   }
-  // Skip if already declared
+  // Skip if already declared in this file
   if (lines.some((l) => l.trim() === `account ${name}`))
     return { success: true };
   const insertAt = lastAccountLine >= 0 ? lastAccountLine + 1 : 0;
