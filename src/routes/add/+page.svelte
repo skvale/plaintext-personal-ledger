@@ -122,7 +122,10 @@
 
 <!-- Form -->
 <div class="rounded-xl border border-slate-400 bg-slate-900 p-6 animate-in animate-in-2">
-  <form method="POST" use:enhance={() => {
+  <form method="POST" use:enhance={({ formData }) => {
+      // Refresh postings from reactive state to avoid blur+submit race
+      // (Svelte may not have flushed DOM updates to the hidden input yet)
+      formData.set('postings', JSON.stringify(postings.map(p => ({ account: p.account, amount: p.amount }))));
       submitting = true;
       return async ({ result }) => {
         submitting = false;
