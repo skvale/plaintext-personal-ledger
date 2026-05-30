@@ -55,23 +55,23 @@
 >
   <div class="relative">
     <DatePicker.Input
-      class="flex w-full items-center rounded-lg border border-slate-300 bg-white px-3 pr-8 py-2 text-sm text-slate-100 outline-none focus-within:border-blue-300 dark:border-slate-300 dark:bg-slate-950 {inputClass}"
+      class="flex w-full items-center rounded-lg border border-slate-300 bg-white px-3 pr-8 py-2 text-sm text-slate-100 outline-none focus-within:border-blue-300 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 {inputClass}"
     >
       {#snippet children({ segments })}
         {#each segments as { part, value: segVal }}
           {#if part === 'literal'}
-            <span class="text-slate-100">{segVal}</span>
+            <span class="text-slate-400 dark:text-slate-500">{segVal}</span>
           {:else}
             <DatePicker.Segment
               {part}
-              class="rounded px-0.5 tabular-nums outline-none focus:bg-blue-300/20 focus:text-blue-500 data-[placeholder]:text-slate-100"
+              class="rounded px-0.5 tabular-nums outline-none focus:bg-blue-300/20 focus:text-blue-500 data-[placeholder]:text-slate-400 dark:data-[placeholder]:text-slate-500"
             >{segVal}</DatePicker.Segment>
           {/if}
         {/each}
       {/snippet}
     </DatePicker.Input>
     <DatePicker.Trigger
-      class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-100 transition-colors hover:text-slate-100"
+      class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 transition-colors hover:text-slate-100 dark:text-slate-400 dark:hover:text-slate-200"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>

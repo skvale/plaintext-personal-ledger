@@ -464,7 +464,7 @@
                 invalidateAll();
               }
             }}
-            class="rounded-md bg-blue-300 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+            class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? 'Importing…' : 'Import'}
           </button>
@@ -686,7 +686,7 @@
             <button
               type="submit"
               disabled={isLoading}
-              class="rounded-md bg-blue-300 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
+              class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? 'Importing…' : `Import ${previewCount} transaction${previewCount === 1 ? '' : 's'}`}
             </button>

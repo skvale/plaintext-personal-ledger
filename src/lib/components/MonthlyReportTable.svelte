@@ -55,6 +55,29 @@
   function toggle(account: string) {
     expanded[account] = !isExpanded(account);
   }
+
+  // Track collapsed sub-accounts (keyed by full account name)
+  let collapsedSubs = $state<Set<string>>(new Set());
+
+  function toggleSub(name: string) {
+    const next = new Set(collapsedSubs);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    collapsedSubs = next;
+  }
+
+  function isSubCollapsed(name: string) {
+    return collapsedSubs.has(name);
+  }
+
+  // A row is hidden if any of its ancestors are collapsed
+  function isHidden(name: string): boolean {
+    const parts = name.split(':');
+    for (let i = 1; i < parts.length - 1; i++) {
+      if (collapsedSubs.has(parts.slice(0, i + 1).join(':'))) return true;
+    }
+    return false;
+  }
 </script>
 
 <div class="rounded-xl border border-slate-400 bg-slate-900 overflow-hidden">
@@ -103,16 +126,26 @@
               {@const parentInData = parentIdx >= 1}
               {@const indent = parentInData ? parentIdx : 0}
               {@const label = parentInData ? parts.slice(parentIdx + 1).join(':') : parts.slice(1).join(':')}
-              <tr class="border-b border-black/[0.08] dark:border-white/[0.06] hover:border-b-slate-500 dark:hover:border-b-slate-500 transition-colors">
-                <td class="px-5 py-2.5 whitespace-nowrap sticky left-0 bg-slate-900 z-10" style="padding-left: {20 + indent * 16}px">
-                  <span class="font-mono text-sm {hasChildren ? 'font-medium' : ''} {section.amountColor}">{label}</span>
-                </td>
-                {#each row.amounts as amount}
-                  <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}">
-                    {#if !Number.isNaN(amount)}<Amount value={amount} />{/if}
+              {#if !isHidden(row.name)}
+                <tr class="border-b border-black/[0.08] dark:border-white/[0.06] hover:border-b-slate-500 dark:hover:border-b-slate-500 transition-colors {hasChildren ? 'cursor-pointer' : ''}"
+                  onclick={hasChildren ? () => toggleSub(row.name) : undefined}>
+                  <td class="px-5 py-2.5 whitespace-nowrap sticky left-0 bg-slate-900 z-10" style="padding-left: {20 + indent * 16}px">
+                    <span class="inline-flex items-center gap-1.5">
+                      {#if hasChildren}
+                        <svg class="h-3 w-3 shrink-0 text-slate-400 transition-transform {isSubCollapsed(row.name) ? '' : 'rotate-90'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      {:else}
+                        <span class="h-3 w-3 shrink-0"></span>
+                      {/if}
+                      <span class="font-mono text-sm {hasChildren ? 'font-medium text-slate-300 dark:text-slate-100' : 'text-slate-500 dark:text-slate-300'}">{label}</span>
+                    </span>
                   </td>
-                {/each}
-              </tr>
+                  {#each row.amounts as amount}
+                    <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}">
+                      {#if !Number.isNaN(amount)}<Amount value={amount} />{/if}
+                    </td>
+                  {/each}
+                </tr>
+              {/if}
             {/each}
             <tr class="border-b border-slate-300">
               <td class="px-5 py-2.5 sticky left-0 bg-slate-900 z-10 align-baseline">

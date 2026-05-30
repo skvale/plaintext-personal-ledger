@@ -77,7 +77,7 @@
       onclick={onremove}
       disabled={!canRemove}
       title="Remove posting" aria-label="Remove posting"
-      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-rose-500/30 text-lg text-rose-400 transition-colors hover:border-rose-500/60 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-100 disabled:hover:bg-transparent"
+      class="flex shrink-0 items-center justify-center rounded-lg border border-rose-500/30 px-3 py-2 text-base text-rose-400 transition-colors hover:border-rose-500/60 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-100 disabled:hover:bg-transparent"
     >×</button>
   </div>
   {#if isDragging.current}
