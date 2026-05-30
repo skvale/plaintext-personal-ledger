@@ -17,11 +17,13 @@
     sections,
     footer,
     signed = false,
+    totalsColumn = true,
   }: {
     months: string[];
     sections: Section[];
     footer?: { label: string; amounts: number[] };
     signed?: boolean;
+    totalsColumn?: boolean;
   } = $props();
 
   const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
@@ -78,6 +80,11 @@
     }
     return false;
   }
+
+  const canShowTotals = $derived(totalsColumn && months.length > 1);
+  let showTotals = $state(true);
+  const visibleTotals = $derived(canShowTotals && showTotals);
+  const sum = (amounts: number[]) => amounts.reduce((a, b) => a + b, 0);
 </script>
 
 <div class="rounded-xl border border-slate-400 bg-slate-900 overflow-hidden">
@@ -89,6 +96,15 @@
           {#each months as month}
             <th class="px-4 py-3 font-medium text-slate-100 text-right whitespace-nowrap">{fmtMonth(month)}</th>
           {/each}
+          {#if canShowTotals}
+            <th class="px-4 py-3 font-medium text-right whitespace-nowrap border-l border-slate-400/40 cursor-pointer select-none" onclick={() => showTotals = !showTotals}>
+              {#if showTotals}
+                <span class="text-slate-100 hover:text-slate-400 transition-colors">Total ×</span>
+              {:else}
+                <span class="text-slate-500 hover:text-slate-100 transition-colors" title="Show totals">∑</span>
+              {/if}
+            </th>
+          {/if}
         </tr>
       </thead>
       <tbody>
@@ -105,8 +121,12 @@
               {#each section.totals as amount}
                 <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}"><Amount value={amount} /></td>
               {/each}
+              {#if visibleTotals}
+                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap border-l border-slate-400/40 {getAmountColor(section.account, sum(section.totals), section.amountColor)}"><Amount value={sum(section.totals)} /></td>
+              {/if}
             {:else}
               {#each months as _}<td></td>{/each}
+              {#if visibleTotals}<td class="border-l border-slate-400/40"></td>{/if}
             {/if}
           </tr>
 
@@ -144,6 +164,12 @@
                       {#if !Number.isNaN(amount)}<Amount value={amount} />{/if}
                     </td>
                   {/each}
+                  {#if visibleTotals}
+                    {@const rowTotal = sum(row.amounts)}
+                    <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap border-l border-slate-400/40 {getAmountColor(section.account, rowTotal, section.amountColor)}">
+                      {#if !Number.isNaN(rowTotal)}<Amount value={rowTotal} />{/if}
+                    </td>
+                  {/if}
                 </tr>
               {/if}
             {/each}
@@ -157,6 +183,9 @@
               {#each section.totals as amount}
                 <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap {getAmountColor(section.account, amount, section.amountColor)}"><Amount value={amount} /></td>
               {/each}
+              {#if visibleTotals}
+                <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold whitespace-nowrap border-l border-slate-400/40 {getAmountColor(section.account, sum(section.totals), section.amountColor)}"><Amount value={sum(section.totals)} /></td>
+              {/if}
             </tr>
           {/if}
         {/each}
@@ -170,6 +199,12 @@
                 <Amount value={amount} />
               </td>
             {/each}
+            {#if visibleTotals}
+              {@const footerTotal = sum(footer.amounts)}
+              <td class="px-4 py-3 text-right font-mono text-sm font-semibold whitespace-nowrap border-l border-slate-400/40 {footerTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                <Amount value={footerTotal} />
+              </td>
+            {/if}
           </tr>
         {/if}
       </tbody>

@@ -36,7 +36,7 @@
   const tableFooter = $derived(mm ? { label: 'Net Income', amounts: mm.netTotals } : undefined);
 
   // Chart
-  const isMultiMonth = $derived(monthCount > 1);
+  const isMultiMonth = $derived(monthCount !== 1);
 
   const barChartConfig = $derived({
     type: isMultiMonth ? 'line' as const : 'bar' as const,

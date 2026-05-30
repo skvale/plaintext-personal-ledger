@@ -4,6 +4,7 @@ import {
   pickCommodity,
   periodStart,
   lastNMonths,
+  ytdRange,
   generateMonthRange,
   findSubreport,
 } from "./parsing.js";
@@ -298,7 +299,7 @@ export interface MultiMonthPnL {
 export async function getMultiMonthPnL(
   monthCount: number,
 ): Promise<MultiMonthPnL> {
-  const range = lastNMonths(monthCount);
+  const range = monthCount === 0 ? ytdRange() : lastNMonths(monthCount);
   const json = await runJson<any>([
     "incomestatement",
     "--tree",
@@ -435,7 +436,7 @@ export interface MultiMonthCashFlow {
 export async function getCashFlow(
   months = 6,
 ): Promise<{ monthly: CashFlowMonth[]; multi: MultiMonthCashFlow }> {
-  const range = lastNMonths(months);
+  const range = months === 0 ? ytdRange() : lastNMonths(months);
   const json = await runJson<any>([
     "cashflow",
     "--tree",

@@ -56,6 +56,17 @@ export function lastNMonths(n: number): string {
 }
 
 /**
+ * Returns "YYYY-01-01..YYYY-MM-DD" covering Jan 1 to end of current month (YTD).
+ */
+export function ytdRange(): string {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const start = new Date(now.getFullYear(), 0, 1);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return `${fmt(start)}..${fmt(end)}`;
+}
+
+/**
  * Generate YYYY-MM strings for N months ending at current month.
  * Used to ensure the output array has exactly N entries, filling in zeros for missing months.
  */

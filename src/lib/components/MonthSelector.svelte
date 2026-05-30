@@ -1,7 +1,7 @@
 <script lang="ts">
   let {
     value = 1,
-    options = [1, 3, 6],
+    options = [1, 3, 6, 0],
     labels,
     onchange,
   }: {
@@ -11,7 +11,7 @@
     onchange: (n: number) => void;
   } = $props();
 
-  const defaultLabels: Record<number, string> = { 1: 'Current' };
+  const defaultLabels: Record<number, string> = { 1: 'Current', 0: 'YTD' };
   function label(n: number): string {
     return labels?.[n] ?? defaultLabels[n] ?? `${n}mo`;
   }

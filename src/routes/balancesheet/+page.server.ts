@@ -5,7 +5,8 @@ import {
 } from "$lib/hledger.server.js";
 
 export const load: PageServerLoad = async ({ url }) => {
-  const months = parseInt(url.searchParams.get("months") ?? "1");
+  const monthsParam = url.searchParams.get("months");
+  const months = monthsParam !== null ? parseInt(monthsParam) : 1;
   const [current, multiMonth] = await Promise.all([
     getBalanceSheet(),
     getBalanceSheetMultiMonth(months),

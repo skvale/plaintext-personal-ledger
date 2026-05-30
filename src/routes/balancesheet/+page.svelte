@@ -27,8 +27,7 @@
   const mm = $derived(data.multiMonth);
 
   function setMonths(n: number) {
-    const url = n > 1 ? `/balancesheet?months=${n}` : '/balancesheet';
-    goto(url, { replaceState: true, noScroll: true });
+    goto(`/balancesheet?months=${n}`, { replaceState: true, noScroll: true });
   }
 
   // Derive table sections from multi-month data
@@ -102,7 +101,7 @@
 
 <div class="mb-6 flex items-center justify-between">
   <h1 class="text-xl font-semibold text-slate-100 flex items-center gap-2">Balance Sheet <span class="text-sm font-normal text-slate-100">net worth = </span><AccountBadge account="assets" size="lg" /> <span class="text-slate-100">&minus;</span> <AccountBadge account="liabilities" size="lg" /></h1>
-  <MonthSelector value={monthCount} onchange={setMonths} />
+  <MonthSelector value={monthCount} options={[1, 3, 6]} onchange={setMonths} />
 </div>
 
 {#if monthCount <= 1}
@@ -126,6 +125,6 @@
 <!-- Table -->
 {#if mm && mm.months.length > 0}
   <div class="mb-6">
-    <MonthlyReportTable months={mm.months} sections={tableSections} footer={tableFooter} />
+    <MonthlyReportTable months={mm.months} sections={tableSections} footer={tableFooter} totalsColumn={false} />
   </div>
 {/if}
