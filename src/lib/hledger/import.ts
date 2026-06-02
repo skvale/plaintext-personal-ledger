@@ -1,5 +1,5 @@
 import { readFile, writeFile, readdir, appendFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { runJson } from "./cache.js";
 import { pickAmount, pickCommodity, extractTag } from "./parsing.js";
 import { getWriteJournal, JOURNAL_DIR, STATEMENTS_DIR } from "./journal.js";
@@ -663,6 +663,26 @@ function normalizePreview(raw: string): string {
   return processed.join("\n\n");
 }
 
+// ─── .latest helpers ───────────────────────────────────────────────────────────
+
+/** Copy the rules-keyed .latest date into the CSV's directory so hledger's
+ *  built-in dedup finds it regardless of the CSV filename. */
+async function applyLatestFromRules(
+  rulesFilename: string,
+  csvPath: string,
+): Promise<void> {
+  const latestPath = join(JOURNAL_DIR, `.latest.${rulesFilename}`);
+  try {
+    const latestDate = await readFile(latestPath, "utf-8").then(s => s.trim());
+    if (latestDate) {
+      const csvLatestPath = join(dirname(csvPath), `.latest.${basename(csvPath)}`);
+      await writeFile(csvLatestPath, latestDate + "\n", "utf-8");
+    }
+  } catch {
+    // No .latest file yet — first import, nothing to skip
+  }
+}
+
 // ─── CSV Import ────────────────────────────────────────────────────────────────
 
 const pendingImports = new Map<
@@ -695,6 +715,9 @@ export async function importCsvPreview(
 
   prunePendingImports(unlink);
 
+  // Let hledger find the rules-keyed .latest so dedup works per rules file
+  await applyLatestFromRules(rulesFilename, tmpPath);
+
   try {
     const { stdout, stderr } = await execAsync(
       `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${rulesPath}" "${tmpPath}"`,
@@ -725,6 +748,10 @@ export async function importCsvConfirm(
   pendingImports.delete(token);
   const { unlink, writeFile, appendFile } = await import("node:fs/promises");
   const writeJournalPath = await getWriteJournal();
+
+  // Let hledger find the rules-keyed .latest so dedup works per rules file
+  const rulesFilename = basename(pending.rulesPath);
+  await applyLatestFromRules(rulesFilename, pending.csvPath);
 
   try {
     const { stdout, stderr } = await execAsync(
@@ -759,18 +786,24 @@ export async function importCsvConfirm(
 
     await appendFile(writeJournalPath, "\n\n" + annotated + "\n");
 
-    const csvDir = pending.csvPath.split("/").slice(0, -1).join("/");
-    const csvBaseName = pending.csvPath.split("/").pop() ?? "";
     const dates = blocks
       .map((b) => b.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? "")
       .filter(Boolean);
     const maxDate = [...dates].sort().pop() ?? "";
     if (maxDate) {
-      await writeFile(
-        `${csvDir}/.latest.${csvBaseName}`,
-        maxDate + "\n",
-        "utf-8",
-      );
+      // Key .latest to the rules file so dedup survives changing CSV filenames
+      const latestPath = join(JOURNAL_DIR, `.latest.${rulesFilename}`);
+      await writeFile(latestPath, maxDate + "\n", "utf-8");
+      // Also write per-CSV .latest for the web UI's "imported through" display
+      const csvDir = pending.csvPath.split("/").slice(0, -1).join("/");
+      const csvBaseName = pending.csvPath.split("/").pop() ?? "";
+      if (csvBaseName) {
+        await writeFile(
+          `${csvDir}/.latest.${csvBaseName}`,
+          maxDate + "\n",
+          "utf-8",
+        ).catch(() => {});
+      }
     }
 
     invalidateCache();
@@ -805,6 +838,9 @@ export async function importCsvPreviewPath(
   });
 
   try {
+    // Let hledger find the rules-keyed .latest so dedup works per rules file
+    await applyLatestFromRules(rulesFilename, csvAbs);
+
     const { stdout, stderr } = await execAsync(
       `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${rulesPath}" "${csvAbs}"`,
     );
