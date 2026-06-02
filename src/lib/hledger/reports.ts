@@ -14,7 +14,7 @@ import type { AccountBalance, ExpenseCategory, MonthlyData } from "./types.js";
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export async function getNetWorth(period?: string): Promise<number> {
-  const args = ["balancesheet", "--depth", "1"];
+  const args = ["balancesheet", "--depth", "6"];
   if (period && period !== "thismonth") args.push("-p", period);
   const json = await runJson<any>(args);
   if (!json) return 0;

@@ -69,11 +69,11 @@
     return amount > 0 ? 'glow-rose' : 'glow-emerald';
   }
 
-  const savingsRate = $derived(
-    data.monthSummary.income > 0
-      ? Math.round(((data.monthSummary.income - data.monthSummary.expenses) / data.monthSummary.income) * 100)
-      : 0
-  );
+   const savingsRate = $derived.by(() => {
+     const { income, expenses } = data.monthSummary;
+     const net = income + expenses;
+     return income === 0 ? 0 : Math.round((net / income) * 100);
+   });
 
   // Learning mode
   const learningEnabled = $derived(data.settings?.learning?.enabled ?? false);
@@ -210,14 +210,14 @@
     <p class="relative text-xl font-medium {data.monthSummary.expenses < 0 ? 'text-emerald-400 glow-emerald' : 'text-rose-400 glow-rose'}"><Amount value={Math.abs(data.monthSummary.expenses)} /></p>
   </div>
 
-  <!-- Savings Rate -->
-  <div class="glass-card relative overflow-hidden rounded-xl border border-slate-400 p-4">
-    <div class="sparkline-wrap"><canvas bind:this={sparkSav}></canvas></div>
-    <p class="relative mb-2 text-xs font-semibold tracking-wide text-slate-100">Savings Rate</p>
-    <p class="relative text-xl font-medium {savingsRate >= 20 ? 'text-emerald-400 glow-emerald' : savingsRate < 0 ? 'text-rose-400 glow-rose' : 'text-slate-100'}">
-      {savingsRate}%
-    </p>
-  </div>
+   <!-- Savings Rate -->
+   <div class="glass-card relative overflow-hidden rounded-xl border border-slate-400 p-4">
+     <div class="sparkline-wrap"><canvas bind:this={sparkSav}></canvas></div>
+     <p class="relative mb-2 text-xs font-semibold tracking-wide text-slate-100">Savings Rate</p>
+     <p class="relative text-xl font-medium {savingsRate >= 20 ? 'text-emerald-400 glow-emerald' : savingsRate < 0 ? 'text-rose-400 glow-rose' : 'text-slate-100'}">
+       {savingsRate}%
+     </p>
+   </div>
 </div>
 
 <!-- Charts + Recent -->

@@ -5,13 +5,14 @@ import {
   getExpenseCategories,
   getRecentTransactions,
   getNetWorthHistory,
-  getMonthlyIncome
+  getMonthlyIncome,
+  lastNMonths
 } from '$lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url, parent }) => {
   const month = url.searchParams.get('month') ?? null;
-  // hledger accepts YYYY-MM as a period (e.g. "2026-02")
-  const period = month ?? 'thismonth';
+  // When no month specified, show current month for dashboard (income/expenses)
+  const period = month ?? "thismonth";
 
   const [parentData, netWorth, monthSummary, expenseCategories, recentTransactions, netWorthHistory, monthlyHistory] =
     await Promise.all([
