@@ -69,11 +69,11 @@
     return amount > 0 ? 'glow-rose' : 'glow-emerald';
   }
 
-   const savingsRate = $derived.by(() => {
-     const { income, expenses } = data.monthSummary;
-     const net = income + expenses;
-     return income === 0 ? 0 : Math.round((net / income) * 100);
-   });
+    const savingsRate = $derived.by(() => {
+      const { income, expenses } = data.monthSummary;
+      const net = income - expenses;
+      return income === 0 ? 0 : Math.round((net / income) * 100);
+    });
 
   // Learning mode
   const learningEnabled = $derived(data.settings?.learning?.enabled ?? false);
@@ -214,7 +214,7 @@
    <div class="glass-card relative overflow-hidden rounded-xl border border-slate-400 p-4">
      <div class="sparkline-wrap"><canvas bind:this={sparkSav}></canvas></div>
      <p class="relative mb-2 text-xs font-semibold tracking-wide text-slate-100">Savings Rate</p>
-     <p class="relative text-xl font-medium {savingsRate >= 20 ? 'text-emerald-400 glow-emerald' : savingsRate < 0 ? 'text-rose-400 glow-rose' : 'text-slate-100'}">
+     <p class="relative text-xl font-medium {savingsRate >= 0 ? 'text-emerald-400 glow-emerald' : 'text-rose-400 glow-rose'}">
        {savingsRate}%
      </p>
    </div>

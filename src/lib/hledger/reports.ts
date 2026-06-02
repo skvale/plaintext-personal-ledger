@@ -45,7 +45,7 @@ export async function getMonthSummary(
   const exp = findSubreport(subs, /expense/i);
   return {
     income: Math.abs(pickAmount(rev?.[1].prTotals?.prrAmounts)),
-    expenses: pickAmount(exp?.[1].prTotals?.prrAmounts),
+    expenses: Math.abs(pickAmount(exp?.[1].prTotals?.prrAmounts)),
   };
 }
 
