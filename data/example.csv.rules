@@ -1,10 +1,9 @@
 ; Rules file for credit card CSV import
 ; https://hledger.org/hledger.html#csv-format
 ;
-; Example CSV with this field mapping:
+; Example CSV with this field mapping (two amount columns):
 ; date,description,amount1,amount2
 ; 01/15/2026,GROCERY STORE,45.67,
-; 01/16/2026,CUP O' COFFEE,6.50,
 ; 01/17/2026,AUTOPAY,,2500.00
 ;
 ; === Skip header row ===
@@ -17,6 +16,8 @@ date-format %m/%d/%Y
 ; === Currency ===
 currency $
 ; === Default accounts ===
+; NOTE: With two amount columns (amount1/amount2), amounts are assigned as-is.
+; For credit cards with purchases in amount1 and payments in amount2:
 account1 expenses:unknown
 account2 liabilities:credit-card
 

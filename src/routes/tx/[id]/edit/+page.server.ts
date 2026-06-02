@@ -56,9 +56,6 @@ export const actions: Actions = {
     const result = await updateTransaction(params.id, { date, description, postings: filled });
     if (!result.success) return fail(422, { error: result.error ?? 'Update failed' });
 
-    // Redirect back to register if ref was empty (default), otherwise go to detail page
-    // If ref=/register, users typically want to go back to register after edit
-    const redirectUrl = ref === '/register' ? ref : `/tx/${params.id}?ref=${encodeURIComponent(ref)}`;
-    redirect(303, redirectUrl);
+    redirect(303, ref);
   }
 };

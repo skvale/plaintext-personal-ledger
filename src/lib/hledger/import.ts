@@ -361,7 +361,13 @@ export async function generateRulesFromCsvContent(
 
     if (hasAmountInOut) {
       out.push(
-        "# amount-in/amount-out detected — hledger handles sign automatically",
+        "# amount-in/amount-out detected — hledger assigns -(amount-out) + amount-in to account1",
+      );
+      out.push(
+        "# For checking/asset accounts, use: account1 expenses:unknown, account2 assets:checking",
+      );
+      out.push(
+        "# For liability (credit card) accounts, SWAP both: account1 liabilities:card, account2 expenses:unknown",
       );
       out.push("");
     }
