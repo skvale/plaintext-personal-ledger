@@ -59,9 +59,12 @@ export async function getRecentTransactions(
     const account = posting?.account ?? "";
     const commodity = posting?.commodity ?? "";
     // Match register: sum of positive non-equity postings
-    const amount = visible
+    const posAmt = visible
       .filter((p: any) => p.amount > 0)
       .reduce((s: number, p: any) => s + p.amount, 0);
+    const amount = posAmt > 0
+      ? posAmt
+      : visible.filter((p: any) => p.amount !== 0).reduce((s: number, p: any) => s + p.amount, 0);
     const txid = getTxid(tx.ttags ?? []);
     return {
       index: i,

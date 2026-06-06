@@ -81,5 +81,6 @@ export function amountColor(amount: number, acct: string): string {
   if (t === "income")   return amount < 0 ? "text-emerald-400" : "text-rose-400";
   if (t === "assets")   return amount > 0 ? "text-emerald-400" : "text-rose-400";
   if (t === "liabilities") return amount > 0 ? "text-amber-400" : "text-emerald-400";
+  if (t === "equity")     return amount > 0 ? "text-rose-400" : "text-emerald-400";
   return "text-slate-100";
 }

@@ -79,7 +79,7 @@ export const load: PageServerLoad = async ({ url }) => {
   const dir = abs.split('/').slice(0, -1).join('/');
   const { headers, rows } = parseCsv(text);
 
-  // Read .latest.FILENAME if it exists
+  // Read .latest.FILENAME if it exists (per-CSV display .latest written on confirm)
   let latestImport: string | null = null;
   try {
     const content = await readFile(`${dir}/.latest.${name}`, 'utf-8');

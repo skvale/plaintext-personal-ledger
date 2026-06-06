@@ -19,7 +19,7 @@ export type { CsvDetectionResult };
 export async function getRulesFiles(): Promise<string[]> {
   try {
     const files = await readdir(JOURNAL_DIR);
-    return files.filter((f) => f.endsWith(".rules")).sort();
+    return files.filter((f) => f.endsWith(".rules") && !f.startsWith(".latest.")).sort();
   } catch {
     return [];
   }
@@ -391,7 +391,7 @@ export async function generateRulesFromCsvContent(
           }
         }
         out.push("");
-        out.push(`if ${desc}`);
+        out.push(`if ${escapeRegex(desc)}`);
         out.push(`  account1 ${suggestedAccount || "expenses:unknown"}`);
       }
       out.push("");
@@ -414,6 +414,20 @@ export async function generateRulesFromCsv(
   } catch {
     return null;
   }
+}
+
+// ─── Regex Escaping for hledger if patterns ──────────────────────────────────
+// hledger treats `if` patterns as regex. Escape metacharacters so vendor
+// strings with *, (, ), etc. match literally.
+
+const SPECIAL_CHARS = /[.*+?^${}()|[\]\\#]/g;
+
+function escapeRegex(str: string): string {
+  return str.replace(SPECIAL_CHARS, "\\$&");
+}
+
+function unescapeRegex(str: string): string {
+  return str.replace(/\\([.*+?^${}()|[\]\\#])/g, "$1");
 }
 
 // ─── Rules Parsing ─────────────────────────────────────────────────────────────
@@ -467,7 +481,9 @@ export function parseRulesFile(content: string): ParsedRulesFile {
     }
 
     if (line.startsWith("if ")) {
-      const patterns = line.slice(3).trim();
+      // strip ; comments hledger allows on if lines
+      const raw = line.slice(3).trim().split(/\s*;/)[0].trim();
+      const patterns = unescapeRegex(raw);
       let account = "";
       const assignments: { key: string; value: string }[] = [];
       let j = i + 1;
@@ -521,7 +537,7 @@ export function serializeRulesFile({ header, items }: ParsedRulesFile): string {
     } else if (item.type === "raw") {
       out.push(item.content ?? "");
     } else {
-      out.push(`if ${item.patterns ?? ""}`);
+      out.push(`if ${escapeRegex(item.patterns ?? "")}`);
       if (item.assignments && item.assignments.length > 0) {
         for (const a of item.assignments) {
           out.push(a.value ? ` ${a.key} ${a.value}` : ` ${a.key}`);
@@ -675,7 +691,8 @@ async function applyLatestFromRules(
   try {
     const latestDate = await readFile(latestPath, "utf-8").then(s => s.trim());
     if (latestDate) {
-      const csvLatestPath = join(dirname(csvPath), `.latest.${basename(csvPath)}`);
+      // hledger with --rules-file looks for .latest.<RULES-FILE> in the CSV dir
+      const csvLatestPath = join(dirname(csvPath), `.latest.${rulesFilename}`);
       await writeFile(csvLatestPath, latestDate + "\n", "utf-8");
     }
   } catch {
@@ -794,15 +811,25 @@ export async function importCsvConfirm(
       // Key .latest to the rules file so dedup survives changing CSV filenames
       const latestPath = join(JOURNAL_DIR, `.latest.${rulesFilename}`);
       await writeFile(latestPath, maxDate + "\n", "utf-8");
-      // Also write per-CSV .latest for the web UI's "imported through" display
+      // Write .latest into CSV dir so hledger finds it on next import
       const csvDir = pending.csvPath.split("/").slice(0, -1).join("/");
-      const csvBaseName = pending.csvPath.split("/").pop() ?? "";
-      if (csvBaseName) {
+      if (csvDir) {
         await writeFile(
-          `${csvDir}/.latest.${csvBaseName}`,
+          `${csvDir}/.latest.${rulesFilename}`,
           maxDate + "\n",
           "utf-8",
         ).catch(() => {});
+        // Per-CSV .latest for display on the documents page
+        if (!pending.isTemp) {
+          const csvBaseName = pending.csvPath.split("/").pop() ?? "";
+          if (csvBaseName) {
+            await writeFile(
+              `${csvDir}/.latest.${csvBaseName}`,
+              maxDate + "\n",
+              "utf-8",
+            ).catch(() => {});
+          }
+        }
       }
     }
 

@@ -121,19 +121,13 @@
     return `/tx/${id}/edit?ref=${encodeURIComponent(ref)}`;
   });
 
-  // Duplicate link: prefill /add with vendor, note, and postings (strip balance assertions, strip auto postings)
+  // Duplicate link: prefill /add with vendor, note, and postings (balance assertions preserved)
   const duplicateHref = $derived(() => {
     const params = new URLSearchParams();
     params.set('vendor', vendor);
     if (note) params.set('note', note);
     for (const p of data.txn.postings) {
-      const rawAmt = p.amount.replace(/\s*=\s*.*$/, '').trim();
-      const num = parseFloat(rawAmt.replace(/[$,]/g, ''));
-      if (!isNaN(num)) {
-        params.append('p', `${p.account}|${rawAmt}`);
-      } else {
-        params.append('p', `${p.account}|`);
-      }
+      params.append('p', `${p.account}|${p.amount}`);
     }
     return `/add?${params.toString()}`;
   });

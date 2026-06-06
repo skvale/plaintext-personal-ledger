@@ -13,7 +13,7 @@
 
   let { data }: { data: PageData } = $props();
 
-  let account = $state<string>('');
+  let account = $state<string>(data.account);
   let query = $state<string>('');
   let from = $state<string>('');
   let to = $state<string>('');
@@ -206,7 +206,9 @@
 
   // Pick the most meaningful posting to surface in table view
   function primaryPosting(txn: import('$lib/types.js').Transaction) {
-    const posts = txn.postings.filter(p => !p.account.startsWith('equity'));
+    const posts = account?.startsWith('equity')
+      ? txn.postings
+      : txn.postings.filter(p => !p.account.startsWith('equity'));
     const nonZero = posts.filter(p => p.amount !== 0);
     const pool = nonZero.length > 0 ? nonZero : posts;
     return (
@@ -317,7 +319,9 @@
       {@const vendor = pipeIdx >= 0 ? txn.description.slice(0, pipeIdx).trim() : txn.description}
       {@const note = pipeIdx >= 0 ? txn.description.slice(pipeIdx + 1).trim() : ''}
       {@const primary = primaryPosting(txn)}
-      {@const vis = txn.postings.filter(p => !p.account.startsWith('equity'))}
+      {@const vis = account?.startsWith('equity')
+        ? txn.postings
+        : txn.postings.filter(p => !p.account.startsWith('equity'))}
       {@const tblSorted = vis.length >= 2 ? [...vis].sort((a, b) => accountSortKey(a.account) - accountSortKey(b.account)) : []}
       {@const tblFirst = tblSorted[0] ?? null}
       {@const tblSecond = tblSorted[1] ?? null}
@@ -416,9 +420,12 @@
         </div>
         <div class="px-3 py-2 text-sm text-right whitespace-nowrap">
           {#if true}
-            {@const matchPostings = account
+            {@const rawMatch = account
               ? vis.filter(p => p.account === account || p.account.startsWith(account + ':'))
               : vis.filter(p => p.amount > 0)}
+            {@const matchPostings = rawMatch.length > 0
+              ? rawMatch
+              : vis.filter(p => p.amount !== 0)}
             {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
             {@const amtAccount = matchPostings.length === 1 ? matchPostings[0].account : (account || (primary?.account ?? ''))}
             <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount)} />
