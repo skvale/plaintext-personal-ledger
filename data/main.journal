@@ -40,7 +40,6 @@ account income
 account income:interest
 account income:revenue
 account income:salary
-account income:salary:access
 account liabilities
 account liabilities:credit-card
 account liabilities:mortgage
