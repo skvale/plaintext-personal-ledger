@@ -230,24 +230,41 @@ export async function attachDocToTransaction(
 ): Promise<{ success: boolean; error?: string }> {
   const resolved = await resolveTransactionBlock(String(id));
   if (!resolved) return { success: false, error: "Transaction not found" };
-  const { lines, block } = resolved;
+  const { lines, block, segments } = resolved;
 
-  // Remove any existing doc: tag
-  lines[block.start] = lines[block.start]
+  const blockSeg = segments.find(
+    s => s.start <= block.start && block.start < s.end
+  );
+  if (!blockSeg) return { success: false, error: "Transaction source file not found" };
+
+  const fileContent = await readFile(blockSeg.file, "utf-8");
+  const fileLines = fileContent.split("\n");
+  const localStart = block.start - blockSeg.start;
+  const txnLen = block.end - block.start;
+
+  // Map merged-line operations to local file lines
+  const localLines = fileLines.slice(localStart, localStart + txnLen);
+  const localBlock = { start: 0, end: txnLen, tindex: block.tindex };
+
+  localLines[localBlock.start] = localLines[localBlock.start]
     .replace(/[,;]\s*doc:\s*\S+/g, "")
     .trimEnd();
-  const cidx = findCommentLine(lines, block);
+  const cidx = findCommentLine(localLines, localBlock);
   if (cidx >= 0) {
-    lines[cidx] = lines[cidx].replace(/,\s*doc:\s*\S+/g, "").trimEnd();
-    if (/^\s+;\s*$/.test(lines[cidx])) {
-      lines.splice(cidx, 1);
+    localLines[cidx] = localLines[cidx].replace(/,\s*doc:\s*\S+/g, "").trimEnd();
+    if (/^\s+;\s*$/.test(localLines[cidx])) {
+      localLines.splice(cidx, 1);
     }
   }
 
-  appendToCommentLine(lines, block, `doc: ${docPath}`);
+  appendToCommentLine(localLines, localBlock, `doc: ${docPath}`);
 
-  const JOURNAL = await getWriteJournal();
-  await writeFile(JOURNAL, lines.join("\n"), "utf-8");
+  const updated = [
+    ...fileLines.slice(0, localStart),
+    ...localLines,
+    ...fileLines.slice(localStart + txnLen),
+  ];
+  await writeFile(blockSeg.file, updated.join("\n"), "utf-8");
   invalidateCache();
   return { success: true };
 }
@@ -259,12 +276,29 @@ export async function addTransactionTag(
 ): Promise<{ success: boolean; error?: string }> {
   const resolved = await resolveTransactionBlock(String(id));
   if (!resolved) return { success: false, error: "Transaction not found" };
-  const { lines, block } = resolved;
+  const { lines, block, segments } = resolved;
 
-  appendToCommentLine(lines, block, `${tag}: ${value}`);
+  const blockSeg = segments.find(
+    s => s.start <= block.start && block.start < s.end
+  );
+  if (!blockSeg) return { success: false, error: "Transaction source file not found" };
 
-  const JOURNAL = await getWriteJournal();
-  await writeFile(JOURNAL, lines.join("\n"), "utf-8");
+  const fileContent = await readFile(blockSeg.file, "utf-8");
+  const fileLines = fileContent.split("\n");
+  const localStart = block.start - blockSeg.start;
+  const txnLen = block.end - block.start;
+
+  const localLines = fileLines.slice(localStart, localStart + txnLen);
+  const localBlock = { start: 0, end: txnLen, tindex: block.tindex };
+
+  appendToCommentLine(localLines, localBlock, `${tag}: ${value}`);
+
+  const updated = [
+    ...fileLines.slice(0, localStart),
+    ...localLines,
+    ...fileLines.slice(localStart + txnLen),
+  ];
+  await writeFile(blockSeg.file, updated.join("\n"), "utf-8");
   invalidateCache();
   return { success: true };
 }
@@ -306,6 +340,12 @@ interface TransactionBlock {
   start: number;
   end: number;
   tindex: number;
+}
+
+interface FileSegment {
+  start: number;
+  end: number;
+  file: string;
 }
 
 function findTransactionBlock(
@@ -360,41 +400,59 @@ export async function resolveTransactionBlock(
   lines: string[];
   block: TransactionBlock;
   original: string;
+  segments: FileSegment[];
 } | null> {
   const original = await readFile(READ_JOURNAL, "utf-8");
   const lines = original.split("\n");
 
-  // Expand includes to get all lines from included files
+  // Expand includes to get all lines from included files, tracking source per segment
   const allLines: string[] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
+  const segments: FileSegment[] = [];
+  let mainSegStart = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
     if (trimmed.startsWith("include ")) {
+      // Flush preceding main.journal lines as a segment
+      if (i > mainSegStart) {
+        const segLines = lines.slice(mainSegStart, i);
+        allLines.push(...segLines);
+        segments.push({ start: allLines.length - segLines.length, end: allLines.length, file: READ_JOURNAL });
+      }
       const includedFile = trimmed.slice(8).trim();
       const absPath = join(dirname(READ_JOURNAL), includedFile);
       try {
         const incContent = await readFile(absPath, "utf-8");
-        allLines.push(...incContent.split("\n"));
+        const incLines = incContent.split("\n");
+        allLines.push(...incLines);
+        segments.push({ start: allLines.length - incLines.length, end: allLines.length, file: absPath });
       } catch {
-        allLines.push(line); // fallback
+        allLines.push(lines[i]);
+        segments.push({ start: allLines.length - 1, end: allLines.length, file: READ_JOURNAL });
       }
-    } else {
-      allLines.push(line);
+      mainSegStart = i + 1;
     }
+  }
+  // Flush any remaining main.journal lines after last include
+  if (mainSegStart < lines.length) {
+    const remainingLines = lines.slice(mainSegStart);
+    allLines.push(...remainingLines);
+    segments.push({ start: allLines.length - remainingLines.length, end: allLines.length, file: READ_JOURNAL });
   }
 
   if (!/^\d+$/.test(id)) {
     const block = findTransactionBlockByTxid(allLines, id);
-    if (block) return { lines: allLines, block, original };
-    // Try original lines too
+    if (block) return { lines: allLines, block, original, segments };
+    // Try original lines too (no includes expanded)
     const block2 = findTransactionBlockByTxid(lines, id);
-    if (block2) return { lines, block: block2, original };
+    if (block2) return { lines, block: block2, original, segments: [{ start: 0, end: lines.length, file: READ_JOURNAL }] };
     return null;
   }
 
   const tindex = parseInt(id, 10);
   const block = findTransactionBlock(allLines, tindex);
   if (!block) return null;
-  return { lines: allLines, block: { ...block, tindex }, original };
+  return { lines: allLines, block: { ...block, tindex }, original, segments };
 }
 
 // ─── Transaction Edit ─────────────────────────────────────────────────────────
@@ -444,6 +502,17 @@ export async function getTransactionForEdit(
   };
 }
 
+// ─── Amount Parsing ──────────────────────────────────────────────────────────
+
+function parseAmount(raw: string): number {
+  const s = raw.replace(/[$,]/g, "");
+  if (s.includes(" @ ")) {
+    const [sp, pp] = s.split(" @ ");
+    return parseFloat(sp) * parseFloat(pp);
+  }
+  return parseFloat(s);
+}
+
 // ─── Related Payable ─────────────────────────────────────────────────────────
 
 export async function getRelatedPayable(txn: {
@@ -467,11 +536,11 @@ export async function getRelatedPayable(txn: {
   );
   if (!payablePosting) return null;
 
-  let amt = parseFloat(payablePosting.amount.replace(/[$,]/g, ""));
+  let amt = parseAmount(payablePosting.amount);
   if (isNaN(amt)) {
     const explicitSum = txn.postings.reduce((s, p) => {
       if (p === payablePosting) return s;
-      const n = parseFloat(p.amount.replace(/[$,]/g, ""));
+      const n = parseAmount(p.amount);
       return s + (isNaN(n) ? 0 : n);
     }, 0);
     amt = -explicitSum;
@@ -746,22 +815,24 @@ export async function deleteTransaction(
   const billid = blockText.match(/billid:\s*([^\s,]+)/)?.[1];
   const paymentid = blockText.match(/paymentid:\s*([^\s,]+)/)?.[1];
 
-  const JOURNAL = await getWriteJournal();
+  // helper: apply tag removal to a single source file
+  const removeTagForTx = async (txid: string, tag: string) => {
+    const txRes = await resolveTransactionBlock(txid);
+    if (!txRes) return;
+    const txSeg = txRes.segments.find(
+      s => s.start <= txRes.block.start && txRes.block.start < s.end
+    );
+    if (!txSeg) return;
+    const fileContent = await readFile(txSeg.file, "utf-8");
+    const fileLines = fileContent.split("\n");
+    const localStart = txRes.block.start - txSeg.start;
+    const txnLen = txRes.block.end - txRes.block.start;
+    removeTransactionTag(fileLines, localStart, tag, localStart + txnLen);
+    await writeFile(txSeg.file, fileLines.join("\n"), "utf-8");
+  };
 
-  if (billid) {
-    const billRes = await resolveTransactionBlock(billid);
-    if (billRes) {
-      removeTransactionTag(billRes.lines, billRes.block.start, "paymentid");
-      await writeFile(JOURNAL, billRes.lines.join("\n"), "utf-8");
-    }
-  }
-  if (paymentid) {
-    const payRes = await resolveTransactionBlock(paymentid);
-    if (payRes) {
-      removeTransactionTag(payRes.lines, payRes.block.start, "billid");
-      await writeFile(JOURNAL, payRes.lines.join("\n"), "utf-8");
-    }
-  }
+  if (billid) await removeTagForTx(billid, "paymentid");
+  if (paymentid) await removeTagForTx(paymentid, "billid");
 
   const resolved = await resolveTransactionBlock(String(id));
   if (!resolved)
@@ -769,19 +840,30 @@ export async function deleteTransaction(
       success: false,
       error: "Transaction not found after link cleanup",
     };
-  const { lines, block, original } = resolved;
+  const { lines, block, segments } = resolved;
 
-  let removeEnd = block.end;
-  if (removeEnd < lines.length && lines[removeEnd].trim() === "") removeEnd++;
+  const blockSeg = segments.find(
+    s => s.start <= block.start && block.start < s.end
+  );
+  if (!blockSeg)
+    return { success: false, error: "Transaction source file not found" };
 
-  const updated = [...lines.slice(0, block.start), ...lines.slice(removeEnd)];
-  await writeFile(JOURNAL, updated.join("\n"), "utf-8");
+  const fileContent = await readFile(blockSeg.file, "utf-8");
+  const fileLines = fileContent.split("\n");
+
+  const localStart = block.start - blockSeg.start;
+  const txnLength = block.end - block.start;
+  let localEnd = localStart + txnLength;
+  if (localEnd < fileLines.length && fileLines[localEnd].trim() === "") localEnd++;
+
+  const updated = [...fileLines.slice(0, localStart), ...fileLines.slice(localEnd)];
+  await writeFile(blockSeg.file, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await execAsync(`hledger -f "${READ_JOURNAL}" check`);
     invalidateCache();
     return { success: true };
   } catch (e: any) {
-    await writeFile(JOURNAL, original, "utf-8");
+    await writeFile(blockSeg.file, fileContent, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
     return {
       success: false,

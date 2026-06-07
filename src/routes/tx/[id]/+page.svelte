@@ -50,8 +50,14 @@
     const parsed = data.txn.postings.map((p) => {
       const assertionMatch = p.amount.match(/=\s*(.+)$/);
       const assertion = assertionMatch ? assertionMatch[1].trim() : '';
-      const rawAmt = p.amount.replace(/\s*=\s*.*$/, ''); // strip balance assertion
-      const num = parseFloat(rawAmt.replace(/[$,]/g, ''));
+      const rawAmt = p.amount.replace(/\s*=\s*.*$/, '').trim(); // strip balance assertion
+      let num: number;
+      if (rawAmt.includes(' @ ')) {
+        const [sharePart, pricePart] = rawAmt.split(' @ ');
+        num = parseFloat(sharePart.replace(/[$,]/g, '')) * parseFloat(pricePart.replace(/[$,]/g, ''));
+      } else {
+        num = parseFloat(rawAmt.replace(/[$,]/g, ''));
+      }
       // Balance assignment: no explicit amount, but has assertion (e.g. "= $34,000")
       const isBalanceAssignment = isNaN(num) && !!assertion;
       const assertionNum = assertion ? parseFloat(assertion.replace(/[$,]/g, '')) : NaN;

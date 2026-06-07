@@ -55,6 +55,17 @@ creditcard: ## Show credit card transactions
 investments: ## Show investment account balances
 	$(HLEDGER) bal assets:investments --tree
 
+market-value: ## Show investments at market value (-V)
+	$(HLEDGER) bal -V assets:investments
+
+cost-basis: ## Show investments at cost (-B)
+	$(HLEDGER) bal -B assets:investments
+
+unrealized: ## Show unrealized gains (market - cost)
+	$(HLEDGER) bal -V assets:investments
+	@echo "--- cost ---"
+	$(HLEDGER) bal -B assets:investments
+
 dividends: ## Show dividend income
 	$(HLEDGER) reg income:dividends
 

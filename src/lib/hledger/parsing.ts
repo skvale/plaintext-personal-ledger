@@ -162,10 +162,10 @@ export function fmtAmount(amount: number): string {
 export function normaliseAmount(amt: string): string {
   if (!amt) return amt;
   // Handle balance assertions/assignments: "amount = assertion"
-  const eqIdx = amt.indexOf(" = ");
-  if (eqIdx >= 0) {
-    const left = normaliseAmount(amt.slice(0, eqIdx).trim());
-    const right = normaliseAmount(amt.slice(eqIdx + 3).trim());
+  const eqMatch = amt.match(/^(.*?)\s*=\s*(.+)$/);
+  if (eqMatch) {
+    const left = normaliseAmount(eqMatch[1].trim());
+    const right = normaliseAmount(eqMatch[2].trim());
     return `${left} = ${right}`;
   }
   // Already has a currency symbol or commodity — leave it alone

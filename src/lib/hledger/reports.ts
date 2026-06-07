@@ -14,7 +14,7 @@ import type { AccountBalance, ExpenseCategory, MonthlyData } from "./types.js";
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export async function getNetWorth(period?: string): Promise<number> {
-  const args = ["balancesheet", "--depth", "6"];
+  const args = ["balancesheet", "-V", "--depth", "6"];
   if (period && period !== "thismonth") args.push("-p", period);
   const json = await runJson<any>(args);
   if (!json) return 0;
@@ -34,6 +34,7 @@ export async function getMonthSummary(
 ): Promise<{ income: number; expenses: number }> {
   const json = await runJson<any>([
     "incomestatement",
+    "-V",
     "--depth",
     "1",
     "-p",
@@ -54,6 +55,7 @@ export async function getExpenseCategories(
 ): Promise<ExpenseCategory[]> {
   const data = await runJson<any>([
     "bal",
+    "-V",
     "expenses",
     "--tree",
     "--depth",
@@ -103,6 +105,7 @@ export async function getBalanceSheetMultiMonth(
   const range = lastNMonths(monthCount);
   const json = await runJson<any>([
     "balancesheet",
+    "-V",
     "--tree",
     "--auto",
     "--monthly",
@@ -165,8 +168,8 @@ export async function getBalanceSheetMultiMonth(
 export async function getBalanceSheet(): Promise<BalanceSheetData> {
   const range = lastNMonths(12);
   const [snapshot, history] = await Promise.all([
-    runJson<any>(["balancesheet", "--depth", "6"]),
-    runJson<any>(["balancesheet", "--monthly", "--depth", "1", "-p", range]),
+    runJson<any>(["balancesheet", "-V", "--depth", "6"]),
+    runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range]),
   ]);
 
   const subs: CbrSubreport[] = snapshot?.cbrSubreports ?? [];
@@ -241,6 +244,7 @@ export async function getMonthlyIncome(
   const range = dateRange ?? lastNMonths(months);
   const json = await runJson<any>([
     "incomestatement",
+    "-V",
     "--monthly",
     "--depth",
     "1",
@@ -302,6 +306,7 @@ export async function getMultiMonthPnL(
   const range = monthCount === 0 ? ytdRange() : lastNMonths(monthCount);
   const json = await runJson<any>([
     "incomestatement",
+    "-V",
     "--tree",
     "--monthly",
     "--depth",
@@ -370,6 +375,7 @@ export async function getIncomeStatementDetail(
   const range = dateRange ?? lastNMonths(months);
   const json = await runJson<any>([
     "incomestatement",
+    "-V",
     "--tree",
     "--depth",
     "6",
@@ -439,6 +445,7 @@ export async function getCashFlow(
   const range = months === 0 ? ytdRange() : lastNMonths(months);
   const json = await runJson<any>([
     "cashflow",
+    "-V",
     "--tree",
     "--monthly",
     "--depth",
@@ -492,7 +499,7 @@ export async function getAccountBalances(): Promise<AccountBalance[]> {
   const { getAccountNames } = await import("./transactions.js");
   const allNames = await getAccountNames();
 
-  const data = await runJson<any>(["bal", "--flat", "--no-total"]);
+  const data = await runJson<any>(["bal", "-V", "--flat", "--no-total"]);
   const rows: any[] = Array.isArray(data) ? (data[0] ?? []) : [];
   const balanceMap = new Map<string, number>(
     rows.map((row) => [row[0] as string, pickAmount(row[3])]),
@@ -522,6 +529,7 @@ export async function getNetWorthHistory(): Promise<
   const range = lastNMonths(13);
   const json = await runJson<any>([
     "balancesheet",
+    "-V",
     "--monthly",
     "--depth",
     "1",
@@ -545,37 +553,47 @@ export async function getNetWorthHistory(): Promise<
 
 export async function getPortfolioData(): Promise<{
   accounts: { name: string; balance: number }[];
+  costAccounts: { name: string; balance: number }[];
   history: { month: string; total: number }[];
+  costHistory: { month: string; total: number }[];
 }> {
   const range = lastNMonths(13);
-  const [snapshot, histJson] = await Promise.all([
-    runJson<any>(["bal", "assets:investments", "--flat"]),
-    runJson<any>([
-      "balancesheet",
-      "--monthly",
-      "--depth",
-      "1",
-      "-p",
-      range,
-      "assets:investments",
-    ]),
+  const [mktSnapshot, costSnapshot, mktHistJson, costHistJson] = await Promise.all([
+    runJson<any>(["bal", "-V", "assets:investments", "--flat"]),
+    runJson<any>(["bal", "-B", "assets:investments", "--flat"]),
+    runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
+    runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
   ]);
 
-  const rows: any[] = Array.isArray(snapshot) ? (snapshot[0] ?? []) : [];
-  const accounts = rows
+  const mktRows: any[] = Array.isArray(mktSnapshot) ? (mktSnapshot[0] ?? []) : [];
+  const accounts = mktRows
     .filter((row) => row[0] && row[0] !== "assets:investments")
     .map((row) => ({ name: row[0] as string, balance: pickAmount(row[3]) }))
     .filter((a) => Math.abs(a.balance) > 0.01);
 
-  const subs: CbrSubreport[] = histJson?.cbrSubreports ?? [];
-  const assetHist = findSubreport(subs, /asset/i)?.[1];
-  const dates: any[] = histJson?.cbrDates ?? [];
-  const history = dates.map((d, i) => ({
+  const costRows: any[] = Array.isArray(costSnapshot) ? (costSnapshot[0] ?? []) : [];
+  const costAccounts = costRows
+    .filter((row) => row[0] && row[0] !== "assets:investments")
+    .map((row) => ({ name: row[0] as string, balance: pickAmount(row[3]) }))
+    .filter((a) => Math.abs(a.balance) > 0.01);
+
+  const mktSubs: CbrSubreport[] = mktHistJson?.cbrSubreports ?? [];
+  const mktAssetHist = findSubreport(mktSubs, /asset/i)?.[1];
+  const mktDates: any[] = mktHistJson?.cbrDates ?? [];
+  const history = mktDates.map((d, i) => ({
     month: periodStart(d),
-    total: pickAmount(assetHist?.prTotals?.prrAmounts?.[i]),
+    total: pickAmount(mktAssetHist?.prTotals?.prrAmounts?.[i]),
   }));
 
-  return { accounts, history };
+  const costSubs: CbrSubreport[] = costHistJson?.cbrSubreports ?? [];
+  const costAssetHist = findSubreport(costSubs, /asset/i)?.[1];
+  const costDates: any[] = costHistJson?.cbrDates ?? [];
+  const costHistory = costDates.map((d, i) => ({
+    month: periodStart(d),
+    total: pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]),
+  }));
+
+  return { accounts, costAccounts, history, costHistory };
 }
 
 export interface UnrealizedGains {
@@ -593,92 +611,79 @@ export interface UnrealizedGains {
 
 export async function getUnrealizedGains(): Promise<UnrealizedGains> {
   const now = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const monthsAgo = (n: number) => {
-    const d = new Date(now);
-    d.setMonth(d.getMonth() - n);
-    return fmt(d);
-  };
-  const ytdStart = `${now.getFullYear()}-01-01`;
-  const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-
   const range = lastNMonths(13);
-  async function getUnrealized(pattern: string, period?: string): Promise<number> {
-    const args = ["bal", pattern, "--no-total", "--flat"];
-    if (period) args.push("-p", period);
-    const json = await runJson<any>(args);
-    const rows: any[] = Array.isArray(json) ? (json[0] ?? []) : [];
-    return -rows.reduce((sum, row) => sum + pickAmount(row[3]), 0);
-  }
-  const [total, ytd, m1, m3, m6, m12, monthlyJson] = await Promise.all([
-    getUnrealized("equity:unrealized"),
-    getUnrealized("equity:unrealized", `${ytdStart}..`),
-    getUnrealized("equity:unrealized", `${thisMonthStart}..`),
-    getUnrealized("equity:unrealized", `${monthsAgo(3)}..`),
-    getUnrealized("equity:unrealized", `${monthsAgo(6)}..`),
-    getUnrealized("equity:unrealized", `${monthsAgo(12)}..`),
-    runJson<any>(["bal", "equity:unrealized", "--monthly", "--flat", "-p", range]),
-  ]);
-  const [incTotal, incYtd, incM1, incM3, incM6, incM12, incMonthlyJson] = await Promise.all([
-    getUnrealized("income:unrealized"),
-    getUnrealized("income:unrealized", `${ytdStart}..`),
-    getUnrealized("income:unrealized", `${thisMonthStart}..`),
-    getUnrealized("income:unrealized", `${monthsAgo(3)}..`),
-    getUnrealized("income:unrealized", `${monthsAgo(6)}..`),
-    getUnrealized("income:unrealized", `${monthsAgo(12)}..`),
-    runJson<any>(["bal", "income:unrealized", "--monthly", "--flat", "-p", range]),
+
+  const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson] = await Promise.all([
+    runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
+    runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
+    runJson<any>(["bal", "income:capital-gains", "--monthly", "--flat", "-p", range]),
   ]);
 
-  const prDates: any[] = monthlyJson?.prDates ?? [];
-  const prRows: any[] = monthlyJson?.prRows ?? [];
-  let cumulative = 0;
+  const mktSubs: CbrSubreport[] = mktMonthlyJson?.cbrSubreports ?? [];
+  const mktAssetHist = findSubreport(mktSubs, /asset/i)?.[1];
+  const mktDates: any[] = mktMonthlyJson?.cbrDates ?? [];
+
+  const costSubs: CbrSubreport[] = costMonthlyJson?.cbrSubreports ?? [];
+  const costAssetHist = findSubreport(costSubs, /asset/i)?.[1];
+
+  const realizedPrDates: any[] = realizedMonthlyJson?.prDates ?? [];
+  const realizedPrRows: any[] = realizedMonthlyJson?.prRows ?? [];
+  const realizedByMonth = new Map<string, number>();
+  if (realizedPrRows.length > 0) {
+    const amounts: any[] = realizedPrRows[0]?.prrAmounts ?? [];
+    for (let i = 0; i < realizedPrDates.length; i++) {
+      realizedByMonth.set(periodStart(realizedPrDates[i]), -pickAmount(amounts[i]));
+    }
+  }
+
+  let cumRealized = 0;
   const monthly: { month: string; cumulative: number }[] = [];
+  for (let i = 0; i < mktDates.length; i++) {
+    const month = periodStart(mktDates[i]);
+    const mktTotal = pickAmount(mktAssetHist?.prTotals?.prrAmounts?.[i]);
+    const costTotal = pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]);
+    const realizedThisPeriod = realizedByMonth.get(month) ?? 0;
+    cumRealized += realizedThisPeriod;
+    monthly.push({ month, cumulative: (mktTotal - costTotal) + cumRealized });
+  }
 
-  if (prRows.length > 0) {
-    const amounts: any[] = prRows[0]?.prrAmounts ?? [];
-    for (let i = 0; i < prDates.length; i++) {
-      const month = periodStart(prDates[i]);
-      const change = -pickAmount(amounts[i]);
-      cumulative += change;
-      monthly.push({ month, cumulative });
+  const total = monthly.length > 0 ? monthly[monthly.length - 1].cumulative : 0;
+
+  function getCumulative(endMonth: string): number | undefined {
+    for (let i = monthly.length - 1; i >= 0; i--) {
+      if (monthly[i].month <= endMonth) return monthly[i].cumulative;
     }
   }
 
-  const incPrDates: any[] = incMonthlyJson?.prDates ?? [];
-  const incPrRows: any[] = incMonthlyJson?.prRows ?? [];
-  let incCumulative = 0;
-  const incMonthlyData: { month: string; cumulative: number }[] = [];
-  if (incPrRows.length > 0) {
-    const amounts: any[] = incPrRows[0]?.prrAmounts ?? [];
-    for (let i = 0; i < incPrDates.length; i++) {
-      const month = periodStart(incPrDates[i]);
-      const change = -pickAmount(amounts[i]);
-      incCumulative += change;
-      incMonthlyData.push({ month, cumulative: incTotal + incCumulative });
-    }
-  }
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
 
-  const allMonthly: { month: string; cumulative: number }[] = [];
-  for (let i = 0; i < Math.max(prDates.length, incPrDates.length); i++) {
-    const eq = monthly[i];
-    const inc = incMonthlyData[i];
-    allMonthly.push({
-      month: eq?.month ?? inc?.month ?? "",
-      cumulative: (eq?.cumulative ?? total) + (inc?.cumulative ?? incTotal),
-    });
-  }
+  const ytdStart = `${now.getFullYear()}-01`;
+  const m3Start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  const m6Start = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+  const m12Start = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+  const m3Str = `${m3Start.getFullYear()}-${String(m3Start.getMonth() + 1).padStart(2, '0')}`;
+  const m6Str = `${m6Start.getFullYear()}-${String(m6Start.getMonth() + 1).padStart(2, '0')}`;
+  const m12Str = `${m12Start.getFullYear()}-${String(m12Start.getMonth() + 1).padStart(2, '0')}`;
+
+  const lastCum = getCumulative(lastMonthStr) ?? 0;
+  const ytdCum = getCumulative(ytdStart) ?? 0;
+  const m3Cum = getCumulative(m3Str) ?? 0;
+  const m6Cum = getCumulative(m6Str) ?? 0;
+  const m12Cum = getCumulative(m12Str) ?? 0;
 
   return {
-    total: total + incTotal,
+    total,
     periods: {
       period: "gains",
-      ytd: ytd + incYtd,
-      m1: m1 + incM1,
-      m3: m3 + incM3,
-      m6: m6 + incM6,
-      m12: m12 + incM12,
+      ytd: total - ytdCum,
+      m1: total - lastCum,
+      m3: total - m3Cum,
+      m6: total - m6Cum,
+      m12: total - m12Cum,
     },
-    monthly: allMonthly,
+    monthly,
   };
 }
 

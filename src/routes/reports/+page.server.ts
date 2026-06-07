@@ -46,7 +46,7 @@ export const load: PageServerLoad = async () => {
   const accounts = await getAccountNames();
   // Filter to likely OCI-related accounts
   const ociAccounts = accounts.filter(a =>
-    a.includes('unrealized') || a.includes('translation') || a.includes('oci') || a.includes('comprehensive')
+    a.includes('translation') || a.includes('oci') || a.includes('comprehensive')
   );
   return {
     reports: DEFAULT_REPORTS,

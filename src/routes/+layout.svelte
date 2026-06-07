@@ -285,11 +285,11 @@
     },
     {
       term: "Cost Basis",
-      def: "What you originally paid for an investment. The difference between current value and cost basis is your unrealized gain or loss.",
+      def: "What you originally paid for an investment. Tracked automatically when you use @ cost notation and P price directives. Cost basis appears on the Portfolio page as a separate line vs. market value.",
     },
     {
       term: "Unrealized Gain",
-      def: "The increase in value of an investment you still hold. It's \"unrealized\" because you haven't sold — the gain only becomes real when you do.",
+      def: "The gap between current market value (-V) and original cost (-B) of investments you still hold. hledger computes this automatically — no manual mark-to-market entries needed.",
     },
   ];
 

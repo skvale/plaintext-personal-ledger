@@ -42,11 +42,8 @@
     data.accounts.reduce((s: number, a: any) => s + a.balance, 0)
   );
 
-  const costBasis = $derived(totalValue - data.gains.total);
-
-  // Build gains data aligned to the same months as history
-  const gainsByMonth = $derived(
-    new Map(data.gains.monthly.map((g: any) => [g.month, g.cumulative]))
+  const costBasis = $derived(
+    data.costAccounts.reduce((s: number, a: any) => s + a.balance, 0)
   );
 
   const historyConfig = $derived({
@@ -56,7 +53,7 @@
       datasets: [
         {
           label: 'Cost Basis',
-          data: data.history.map((h: any) => h.total - (gainsByMonth.get(h.month) ?? 0)),
+          data: data.costHistory.map((h: any) => h.total),
           borderColor: theme.isDark ? '#60a5fa' : '#1a66c8',
           backgroundColor: (theme.isDark ? '#60a5fa' : '#1a66c8') + '25',
           fill: true,
@@ -66,7 +63,7 @@
           order: 2,
         },
         {
-          label: 'Total',
+          label: 'Market Value',
           data: data.history.map((h: any) => h.total),
           borderColor: theme.isDark ? '#34d399' : '#059669',
           backgroundColor: 'transparent',
@@ -101,8 +98,10 @@
             label: (ctx: any) => {
               const val = ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 0 });
               if (ctx.datasetIndex === 0) return ` Cost Basis: $${val}`;
-              const gains = (gainsByMonth.get(data.history[ctx.dataIndex]?.month) ?? 0);
-              return ` Total: $${val} (${gains >= 0 ? '+' : '−'}$${Math.abs(gains).toLocaleString('en-US', { minimumFractionDigits: 0 })} gains)`;
+              const cost = data.costHistory[ctx.dataIndex]?.total ?? 0;
+              const diff = val - cost;
+              const sign = diff >= 0 ? '+' : '−';
+              return ` Market: $${val} (${sign}$${Math.abs(diff).toLocaleString('en-US', { minimumFractionDigits: 0 })})`;
             }
           }
         }

@@ -1,8 +1,9 @@
 {
   "assets:bank:checking": ["autopay"],
   "assets:bank:savings": ["transfer to savings"],
-  "assets:investments:vanguard:holdings": ["buy", "reinvestment"],
-  "assets:investments:vanguard:settlement": [
+  "assets:investments": [
+    "buy",
+    "reinvestment",
     "contribution",
     "withdrawal",
     "sell",
@@ -268,5 +269,6 @@
   ],
   "income:interest": ["interest earned"],
   "income:salary": ["payroll", "direct deposit", "employer"],
+  "income:capital-gains": ["gain", "profit", "realized", "sale", "stock sale"],
   "liabilities:credit-card": ["chase card"]
 }

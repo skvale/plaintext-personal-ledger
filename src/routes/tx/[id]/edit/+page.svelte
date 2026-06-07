@@ -87,7 +87,14 @@
   const explicitTotal = $derived(
     editPostings.reduce((sum, p, i) => {
       if (i === autoBalanceIdx) return sum;
-      const n = parseFloat(p.amount.replace(/[$,]/g, ''));
+      const n = (() => {
+        const s = p.amount.replace(/[$,]/g, '');
+        if (s.includes(' @ ')) {
+          const [sp, pp] = s.split(' @ ');
+          return parseFloat(sp) * parseFloat(pp);
+        }
+        return parseFloat(s);
+      })();
       return sum + (isNaN(n) ? 0 : n);
     }, 0)
   );
