@@ -8,6 +8,7 @@ import {
   generateMonthRange,
   findSubreport,
 } from "./parsing.js";
+import { getPrices } from "./pricing.js";
 import type { CbrSubreport } from "./parsing.js";
 import type { AccountBalance, ExpenseCategory, MonthlyData } from "./types.js";
 
@@ -594,6 +595,110 @@ export async function getPortfolioData(): Promise<{
   }));
 
   return { accounts, costAccounts, history, costHistory };
+}
+
+export interface HoldingEntry {
+  ticker: string;
+  shares: number;
+  avgCost: number;
+  costBasis: number;
+  price: number;
+  marketValue: number;
+  gain: number;
+  gainPct: number;
+}
+
+export async function getHoldings(): Promise<HoldingEntry[]> {
+  const json = await runJson<any>(["bal", "-N", "assets:investments", "--flat"]);
+  if (!json) return [];
+
+  const rows: any[] = Array.isArray(json[0]) ? json[0] : [];
+  const byTicker = new Map<string, { shares: number; cost: number }>();
+
+  for (const row of rows) {
+    const amounts = row[3];
+    if (!amounts) continue;
+    const entries: any[] = Array.isArray(amounts) ? amounts : [amounts];
+    for (const entry of entries) {
+      const ticker: string = entry.acommodity ?? '';
+      if (ticker === '$' || !ticker) continue;
+      const shares = entry.aquantity?.floatingPoint ?? 0;
+      const unitCost = entry.acost?.contents?.aquantity?.floatingPoint;
+      const totalCost = unitCost != null ? shares * unitCost : 0;
+      const existing = byTicker.get(ticker) ?? { shares: 0, cost: 0 };
+      existing.shares += shares;
+      existing.cost += totalCost;
+      byTicker.set(ticker, existing);
+    }
+  }
+
+  const prices = await getPrices();
+  const latestPrice = new Map<string, number>();
+  for (const p of prices) {
+    latestPrice.set(p.ticker, p.price);
+  }
+
+  return [...byTicker.entries()]
+    .map(([ticker, { shares, cost }]) => {
+      const price = latestPrice.get(ticker) ?? 0;
+      const marketValue = shares * price;
+      const gain = marketValue - cost;
+      const avgCost = shares > 0 ? cost / shares : 0;
+      const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+      return { ticker, shares, avgCost, costBasis: cost, price, marketValue, gain, gainPct };
+    })
+    .filter(h => h.shares > 0)
+    .sort((a, b) => b.marketValue - a.marketValue);
+}
+
+export async function getMonthlyHoldings(): Promise<{ month: string; holdings: HoldingEntry[] }[]> {
+  const range = lastNMonths(13);
+  const json = await runJson<any>([
+    "bal", "-N", "assets:investments", "--flat", "--monthly", "-p", range,
+  ]);
+  if (!json) return [];
+
+  const dates: string[] = (json.prDates ?? []).map((d: any) =>
+    typeof d === 'string' ? d : (d.contents ?? '')
+  );
+  const rows: any[] = json.prRows ?? [];
+  if (rows.length === 0) return [];
+
+  const prices = await getPrices();
+
+  return dates.map((date, monthIdx) => {
+    const byTicker = new Map<string, number>();
+    for (const row of rows) {
+      const amounts = row.prrAmounts?.[monthIdx];
+      if (!amounts) continue;
+      const entries: any[] = Array.isArray(amounts) ? amounts : [amounts];
+      for (const entry of entries) {
+        const ticker: string = entry.acommodity ?? '';
+        if (ticker === '$' || !ticker) continue;
+        const shares = entry.aquantity?.floatingPoint ?? 0;
+        byTicker.set(ticker, (byTicker.get(ticker) ?? 0) + shares);
+      }
+    }
+
+    const holdings: HoldingEntry[] = [];
+    for (const [ticker, shares] of byTicker) {
+      const price = findPriceAt(prices, ticker, date);
+      const marketValue = shares * price;
+      holdings.push({
+        ticker, shares, avgCost: 0, costBasis: 0,
+        price, marketValue, gain: 0, gainPct: 0,
+      });
+    }
+    holdings.sort((a, b) => b.marketValue - a.marketValue);
+    return { month: date.slice(0, 7), holdings };
+  });
+}
+
+function findPriceAt(prices: { ticker: string; date: string; price: number }[], ticker: string, date: string): number {
+  const relevant = prices
+    .filter(p => p.ticker === ticker && p.date <= date)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return relevant[0]?.price ?? 0;
 }
 
 export interface UnrealizedGains {

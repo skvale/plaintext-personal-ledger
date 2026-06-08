@@ -38,6 +38,8 @@
     return (n >= 0 ? '+' : '−') + fmt(n);
   }
 
+
+
   const totalValue = $derived(
     data.accounts.reduce((s: number, a: any) => s + a.balance, 0)
   );

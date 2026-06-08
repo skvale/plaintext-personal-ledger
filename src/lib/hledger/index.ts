@@ -83,6 +83,8 @@ export {
   getUnrealizedGains,
   getVendors,
   getVendorsMultiMonth,
+  getHoldings,
+  getMonthlyHoldings,
 } from "./reports.js";
 
 export type {
@@ -95,6 +97,7 @@ export type {
   MultiMonthCashFlow,
   UnrealizedGains,
   MultiMonthVendors,
+  HoldingEntry,
 } from "./reports.js";
 
 // ─── Recurring Rules & Forecast ───────────────────────────────────────────────

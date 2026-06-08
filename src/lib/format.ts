@@ -51,8 +51,12 @@ export function parseCommodity(directive: string): CommodityFormat {
  */
 export function formatAmount(n: number, fmt: CommodityFormat): string {
   const abs = Math.abs(n);
+  // Normalize to canonical precision (at least 2dp) to eliminate floating-point noise
+  // before applying display rounding. E.g. 962.4999481 → 962.5 → then to 0dp → 963.
+  const canonicalPrec = Math.max(fmt.decimals, 2);
+  const canonical = Math.round(abs * 10 ** canonicalPrec) / 10 ** canonicalPrec;
   const factor = 10 ** fmt.decimals;
-  const rounded = Math.floor(abs * factor + 0.5) / factor;
+  const rounded = Math.floor(canonical * factor + 0.5) / factor;
   const fixed = rounded.toFixed(fmt.decimals);
   const [intPart, decPart] = fixed.split(".");
 

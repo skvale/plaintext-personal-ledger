@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
-  import { enhance, applyAction } from '$app/forms';
+  import { enhance } from '$app/forms';
   import { page } from '$app/stores';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
@@ -112,16 +112,15 @@
     method="POST"
     action="?/update"
     use:enhance={({ formData }) => {
-      // Refresh postings from reactive state to avoid blur+submit race
-      // (Svelte may not have flushed DOM updates to the hidden input yet)
+      formData.set('ref', $page.url.searchParams.get('ref') ?? '/register');
       formData.set('postings', JSON.stringify(editPostings.map(p => ({
         account: p.account,
         amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
       }))));
       submitting = true;
-      return async ({ result }) => {
+      return async ({ update }) => {
         submitting = false;
-        await applyAction(result);
+        await update();
       };
     }}
     class="flex flex-col gap-5"
@@ -130,6 +129,7 @@
       account: p.account,
       amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
     })))} />
+    <input type="hidden" name="ref" value={$page.url.searchParams.get('ref') ?? '/register'} />
 
     <!-- Date + Vendor + Note -->
     <div class="grid grid-cols-[156px_1fr] gap-3">

@@ -63,7 +63,9 @@
       const assertionNum = assertion ? parseFloat(assertion.replace(/[$,]/g, '')) : NaN;
       return {
         account: p.account,
+        rawAmt: rawAmt.includes(' @ ') ? rawAmt : null,
         parsedAmount: isNaN(num) ? null : num,
+        hasCost: rawAmt.includes(' @ '),
         assertion,
         isBalanceAssignment,
         assertionNum: isNaN(assertionNum) ? null : assertionNum,
@@ -92,6 +94,8 @@
         account: p.account,
         amount,
         absAmount: Math.abs(amount),
+        rawAmt: p.rawAmt,
+        hasCost: p.hasCost,
         isDebit: amount > 0,
         assertion: p.assertion,
         assertionNum: p.assertionNum,
@@ -264,11 +268,14 @@
             <AccountBadge account={p.account} size="md" />
             <span class="font-mono text-sm {accountColor(p.account)}">{accountTail(p.account)}</span>
           </div>
-          <span class="shrink-0 font-mono text-sm tabular-nums">
+          <span class="shrink-0 font-mono text-sm tabular-nums text-right">
             {#if p.isBalanceAssignment}
               <span class="text-slate-100">= </span><span class="text-slate-100">{#if p.assertionNum != null}<Amount precise value={p.assertionNum} />{:else}{p.assertion}{/if}</span>
             {:else if hasBalanceAssignment && p.amount === 0}
               <span class="text-slate-100 italic">auto</span>
+            {:else if p.hasCost}
+              <span class="text-slate-100 whitespace-pre">{p.rawAmt}</span>
+              <span class="text-slate-100/50 ml-2"><Amount precise value={p.absAmount} /></span>
             {:else}
               <span class="{p.amount >= 0 ? 'text-slate-100' : 'text-slate-100'}">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
             {/if}

@@ -23,8 +23,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 export const actions: Actions = {
   update: async ({ params, request, url }) => {
-    const ref = url.searchParams.get('ref') ?? '/register';
     const data = await request.formData();
+    const ref = (data.get('ref') as string) ?? url.searchParams.get('ref') ?? '/register';
 
     const date = (data.get('date') as string)?.trim();
     const vendor = (data.get('vendor') as string)?.trim();
