@@ -94,7 +94,7 @@ export async function getTransactions(
     drop?: number;
   } = {},
 ): Promise<Transaction[]> {
-  const args = ["print"];
+  const args = ["print", "-B"];
   if (opts.from) args.push("-b", opts.from);
   if (opts.to) args.push("-e", opts.to);
   if (opts.account) args.push(opts.account);
@@ -106,7 +106,7 @@ export async function getTransactions(
 
   // If description search returned nothing, try matching account names instead
   if (raw.length === 0 && queryStr) {
-    const acctArgs = ["print"];
+    const acctArgs = ["print", "-B"];
     if (opts.from) acctArgs.push("-b", opts.from);
     if (opts.to) acctArgs.push("-e", opts.to);
     acctArgs.push(`acct:"${queryStr}"`);

@@ -1,0 +1,3 @@
+; hledger price directives
+; Format: P DATE TICKER $PRICE
+; https://hledger.org/journal.html#price-directives

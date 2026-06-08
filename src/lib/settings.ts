@@ -22,6 +22,7 @@ export type SidebarBuiltinId =
   | "mappings"
   | "git"
   | "check"
+  | "pricing"
   | "welcome";
 
 export type SidebarItemConfig =
@@ -56,6 +57,8 @@ export interface Settings {
   };
   /** User-defined keyword → account mappings learned from their rules */
   keywords: { keywords: string[]; account: string }[];
+  /** Investment tickers to track for price fetching */
+  trackedTickers: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -91,6 +94,7 @@ export const DEFAULT_SETTINGS: Settings = {
     suggestions: true,
   },
   keywords: [],
+  trackedTickers: [],
 };
 
 export function mergeSettings(partial: Partial<Settings>): Settings {
@@ -122,5 +126,6 @@ export function mergeSettings(partial: Partial<Settings>): Settings {
       ...(partial.import ?? {}),
     },
     keywords: partial.keywords ?? DEFAULT_SETTINGS.keywords,
+    trackedTickers: partial.trackedTickers ?? DEFAULT_SETTINGS.trackedTickers,
   };
 }

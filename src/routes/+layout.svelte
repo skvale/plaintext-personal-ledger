@@ -65,6 +65,7 @@
     reports: { href: "/reports", label: "Reports", icon: "◫" },
     git: { href: "/git", label: "History", icon: "⎇" },
     check: { href: "/check", label: "Journal Check", icon: "✗" },
+    pricing: { href: "/pricing", label: "Pricing", icon: "⟐" },
     welcome: { href: "/welcome", label: "Welcome", icon: "👋", key: "g w" },
     settings: { href: "/settings", label: "Settings", icon: "⚙", key: "g s" },
   };
@@ -317,6 +318,7 @@
     "/add": ["Transaction", "Posting", "Double-Entry", "Account"],
     "/docs": ["Journal", "Transaction"],
     "/git": ["Journal"],
+    "/pricing": ["Commodity", "Cost Basis"],
     "/check": ["Journal", "Account"],
     "/welcome": ["Journal", "Transaction", "Account", "Double-Entry"],
     "/tx": [

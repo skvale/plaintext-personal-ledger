@@ -427,7 +427,7 @@
               ? rawMatch
               : vis.filter(p => p.amount !== 0)}
             {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
-            {@const amtAccount = matchPostings.length === 1 ? matchPostings[0].account : (account || (primary?.account ?? ''))}
+            {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : (primary?.account ?? '')}
             <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount)} />
           {/if}
         </div>

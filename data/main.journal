@@ -47,5 +47,6 @@ account liabilities:mortgage
 account liabilities:payable ; reconcile:skip
 
 include 2026.journal
+include pricing.journal
 include recurring.journal
 include budget.journal

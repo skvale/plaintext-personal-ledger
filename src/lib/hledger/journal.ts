@@ -77,3 +77,4 @@ export const KEYWORDS_FILE =
 export const JOURNAL_DIR = dirname(READ_JOURNAL);
 
 export const BUDGET_JOURNAL = join(JOURNAL_DIR, "budget.journal");
+export const PRICING_JOURNAL = join(JOURNAL_DIR, "pricing.journal");

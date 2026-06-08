@@ -44,7 +44,7 @@
         const parent = parts.slice(0, i).join(':');
         if (!nameSet.has(parent)) {
           nameSet.add(parent);
-          all.push({ name: parent, used: false });
+          all.push({ name: parent, used: false, declared: false, description: '' });
         }
       }
     }

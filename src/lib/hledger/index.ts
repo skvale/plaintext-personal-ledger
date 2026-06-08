@@ -160,6 +160,20 @@ export {
 
 export type { GitStatus, GitCommit } from "./git.js";
 
+// ─── Pricing ─────────────────────────────────────────────────────────────────
+
+export {
+  getPrices,
+  getPricingJournalRaw,
+  savePricingJournal,
+  appendPrice,
+  deletePrice,
+  saveTrackedTickers,
+  populatePricesForDate,
+} from "./pricing.js";
+
+export type { PriceEntry, PopulateResult } from "./pricing.js";
+
 // ─── Budget ───────────────────────────────────────────────────────────────────
 
 export {

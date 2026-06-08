@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
   import SettingsSortableItem from '$lib/components/SettingsSortableItem.svelte';
@@ -26,6 +26,7 @@ mappings:     { label: 'Import Mappings', icon: '⊟', description: 'Edit CSV im
     reports:      { label: 'Reports',       icon: '◫', description: 'Run custom hledger commands and saved queries', href: '/reports' },
     git:          { label: 'History',       icon: '⎇', description: 'Transaction history and git diff viewer', href: '/git' },
     check:        { label: 'Journal Check', icon: '✗', description: 'Detect errors in the journal file', href: '/check' },
+    pricing:      { label: 'Pricing',       icon: '⟐', description: 'Manage investment price directives (P entries)', href: '/pricing' },
   };
 
   // Active sidebar items in current order

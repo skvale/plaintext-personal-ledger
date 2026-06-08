@@ -132,7 +132,7 @@
   function statusBadge(code: string) {
     if (code.startsWith('A')) return 'bg-emerald-100 text-emerald-800 font-semibold';
     if (code.startsWith('D')) return 'bg-red-100 text-red-800 font-semibold';
-    if (code === '?') return 'bg-slate-200 text-slate-100 font-semibold';
+    if (code === '?') return 'bg-slate-800 text-slate-100 font-semibold';
     return 'bg-amber-100 text-amber-800 font-semibold';
   }
 

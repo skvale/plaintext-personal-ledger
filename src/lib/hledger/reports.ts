@@ -34,7 +34,7 @@ export async function getMonthSummary(
 ): Promise<{ income: number; expenses: number }> {
   const json = await runJson<any>([
     "incomestatement",
-    "-V",
+    "-B",
     "--depth",
     "1",
     "-p",
@@ -244,7 +244,7 @@ export async function getMonthlyIncome(
   const range = dateRange ?? lastNMonths(months);
   const json = await runJson<any>([
     "incomestatement",
-    "-V",
+    "-B",
     "--monthly",
     "--depth",
     "1",
@@ -306,7 +306,7 @@ export async function getMultiMonthPnL(
   const range = monthCount === 0 ? ytdRange() : lastNMonths(monthCount);
   const json = await runJson<any>([
     "incomestatement",
-    "-V",
+    "-B",
     "--tree",
     "--monthly",
     "--depth",
@@ -375,7 +375,7 @@ export async function getIncomeStatementDetail(
   const range = dateRange ?? lastNMonths(months);
   const json = await runJson<any>([
     "incomestatement",
-    "-V",
+    "-B",
     "--tree",
     "--depth",
     "6",
@@ -445,7 +445,7 @@ export async function getCashFlow(
   const range = months === 0 ? ytdRange() : lastNMonths(months);
   const json = await runJson<any>([
     "cashflow",
-    "-V",
+    "-B",
     "--tree",
     "--monthly",
     "--depth",

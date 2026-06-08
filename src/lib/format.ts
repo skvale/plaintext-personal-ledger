@@ -51,7 +51,9 @@ export function parseCommodity(directive: string): CommodityFormat {
  */
 export function formatAmount(n: number, fmt: CommodityFormat): string {
   const abs = Math.abs(n);
-  const fixed = abs.toFixed(fmt.decimals);
+  const factor = 10 ** fmt.decimals;
+  const rounded = Math.floor(abs * factor + 0.5) / factor;
+  const fixed = rounded.toFixed(fmt.decimals);
   const [intPart, decPart] = fixed.split(".");
 
   // Add thousands separators

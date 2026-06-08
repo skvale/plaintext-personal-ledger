@@ -121,6 +121,7 @@
 
 <div class="mb-6">
   <h1 class="text-xl font-semibold text-slate-100">Portfolio</h1>
+  <a href="/pricing" class="mt-1 inline-block text-xs text-slate-100 hover:text-slate-100">Set market prices for each fund →</a>
 </div>
 
 <!-- Summary cards -->
