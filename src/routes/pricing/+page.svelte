@@ -14,7 +14,11 @@
   let tickerSaving = $state(false);
   let tickerSaveError = $state('');
 
-  let fetchDate = $state(new Date().toISOString().slice(0, 10));
+  function todayLocal() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  let fetchDate = $state(todayLocal());
   let fetching = $state(false);
   let fetchResults = $state<{ ticker: string; price: number | null; error?: string }[] | null>(null);
   let fetchSummary = $state('');
@@ -79,6 +83,7 @@
       method="POST"
       action="?/populate"
       use:enhance={() => {
+        const date = fetchDate;
         fetching = true;
         fetchResults = null;
         fetchSummary = '';
@@ -89,6 +94,7 @@
             fetchError = (result.data as any)?.populateError ?? 'Fetch failed';
           }
           await update();
+          fetchDate = date;
         };
       }}
     >
@@ -97,7 +103,7 @@
           type="date"
           name="date"
           bind:value={fetchDate}
-          max={new Date().toISOString().slice(0, 10)}
+          max={todayLocal()}
           class="w-40 rounded-lg border border-slate-300 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-300"
         />
         <input type="hidden" name="tickers" value={tickerInput} />

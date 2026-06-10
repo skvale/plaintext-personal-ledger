@@ -158,9 +158,10 @@ async function fetchYahooPrice(
   ticker: string,
   date: string,
 ): Promise<number | null> {
-  const target = new Date(date + "T12:00:00Z");
-  const startTs = Math.floor(target.getTime() / 1000) - 86400;
-  const endTs = startTs + 3 * 86400;
+  const target = new Date(date + "T00:00:00Z");
+  const targetTs = Math.floor(target.getTime() / 1000);
+  const startTs = targetTs - 2 * 86400;
+  const endTs = targetTs + 3 * 86400;
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${startTs}&period2=${endTs}&interval=1d`;
 
@@ -175,24 +176,26 @@ async function fetchYahooPrice(
 
   const timestamps: number[] = result.timestamp ?? [];
   const closes: (number | null)[] =
-    result.indicators?.adjclose?.[0]?.adjclose ??
-    result.indicators?.quote?.[0]?.close;
-  if (!timestamps.length || !closes) return null;
+    result.indicators?.quote?.[0]?.close ??
+    result.indicators?.adjclose?.[0]?.adjclose;
 
-  const targetMs = target.getTime();
-  let bestIdx = -1;
-  let bestDist = Infinity;
-  for (let i = 0; i < timestamps.length; i++) {
-    if (closes[i] == null) continue;
-    const dist = Math.abs(timestamps[i] * 1000 - targetMs);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestIdx = i;
+  // Match by exact calendar date (Yahoo timestamps align to market open, not midnight)
+  if (timestamps.length && Array.isArray(closes)) {
+    for (let i = 0; i < timestamps.length; i++) {
+      if (closes[i] == null) continue;
+      const ts = timestamps[i];
+      if (ts < startTs || ts >= endTs) continue;
+      const candleDate = new Date(ts * 1000);
+      if (candleDate.toISOString().slice(0, 10) === date) {
+        return Math.round(closes[i]! * 100) / 100;
+      }
     }
   }
 
-  if (bestIdx === -1 || bestDist > 86400 * 1000) return null;
-  return Math.round(closes[bestIdx]! * 100) / 100;
+  // Fall back to live price (candle not yet finalized)
+  const live = result.meta?.regularMarketPrice;
+  if (live != null) return Math.round(live * 100) / 100;
+  return null;
 }
 
 async function appendPricesBatch(lines: string[]): Promise<void> {

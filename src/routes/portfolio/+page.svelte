@@ -48,6 +48,14 @@
     data.costAccounts.reduce((s: number, a: any) => s + a.balance, 0)
   );
 
+  const costMap = $derived(new Map(data.costAccounts.map((a: any) => [a.name, a.balance])));
+  const accountGains = $derived(data.accounts.map((a: any) => {
+    const cost = costMap.get(a.name) ?? 0;
+    const gain = a.balance - cost;
+    return { name: a.name, market: a.balance, cost, gain, pct: cost > 0 ? (gain / cost) * 100 : 0 };
+  }));
+  const gainMap = $derived(new Map(accountGains.map((g: any) => [g.name, g])));
+
   const historyConfig = $derived({
     type: 'line' as const,
     data: {
@@ -176,7 +184,8 @@
       <div class="flex flex-col gap-3">
         {#each data.accounts as acct}
           {@const pct = totalValue > 0 ? Math.round((acct.balance / totalValue) * 100) : 0}
-          <div>
+          {@const g = gainMap.get(acct.name)}
+          <div class="group relative">
             <div class="mb-1 flex items-center justify-between">
               <div class="flex items-center">
                 <AccountBadge account={acct.name} />
@@ -190,6 +199,26 @@
             <div class="h-1.5 overflow-hidden rounded-full bg-slate-800">
               <div class="h-full rounded-full bg-blue-300" style="width: {pct}%"></div>
             </div>
+            {#if g}
+              <div class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded-lg border border-slate-400 bg-slate-900 px-3 py-2 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                <div class="flex items-center justify-between gap-6 whitespace-nowrap">
+                  <span class="text-slate-100">Cost</span>
+                  <span class="font-mono"><Amount value={g.cost} /></span>
+                </div>
+                <div class="flex items-center justify-between gap-6 whitespace-nowrap">
+                  <span class="text-slate-100">Market</span>
+                  <span class="font-mono text-emerald-400"><Amount value={g.market} /></span>
+                </div>
+                <div class="mt-1 flex items-center justify-between gap-6 whitespace-nowrap border-t border-slate-400 pt-1">
+                  <span class="text-slate-100">Gain/Loss</span>
+                  <span class="font-mono {g.gain >= 0 ? 'text-emerald-400' : 'text-rose-400'}">{fmtSigned(g.gain)}</span>
+                </div>
+                <div class="flex items-center justify-between gap-6 whitespace-nowrap">
+                  <span class="text-slate-100">Return</span>
+                  <span class="font-mono {g.gain >= 0 ? 'text-emerald-400' : 'text-rose-400'}">{(g.pct >= 0 ? '+' : '') + g.pct.toFixed(1) + '%'}</span>
+                </div>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
