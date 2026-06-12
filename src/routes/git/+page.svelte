@@ -153,7 +153,7 @@
   </div>
   <form method="POST" action="?/sort" use:enhance={({ }) => async ({ update }) => { await update(); }}>
     <button type="submit"
-      class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100">
+      class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-100 transition-colors hover:border-slate-300 hover:text-slate-100">
       Sort by date
     </button>
   </form>
@@ -165,8 +165,8 @@
 
     <!-- Uncommitted changes + commit form — hidden while browsing a past commit -->
     {#if !activeCommit && data.status.changed.length > 0}
-      <div class="overflow-hidden rounded-xl border border-slate-400 bg-slate-900">
-        <div class="flex items-center justify-between border-b border-slate-400 px-4 py-2.5">
+      <div class="overflow-hidden rounded-xl border border-slate-300 bg-slate-900">
+        <div class="flex items-center justify-between border-b border-slate-300 px-4 py-2.5">
           <p class="text-xs font-semibold tracking-wide text-slate-100">Uncommitted changes</p>
           <button onclick={toggleAll} class="text-xs text-slate-100 hover:text-slate-100 transition-colors">
             {selectedFiles.length === allChangedPaths.length ? 'Deselect all' : 'Select all'}
@@ -183,13 +183,13 @@
           {/each}
         </div>
         <form method="POST" action="?/commit" use:enhance={commitEnhance}
-          class="flex items-center gap-3 border-t border-slate-400 p-3">
+          class="flex items-center gap-3 border-t border-slate-300 p-3">
           <input type="hidden" name="files" value={JSON.stringify(selectedFiles)} />
           <input type="text" name="message" bind:value={commitMessage} placeholder="Commit message…"
             class="flex-1 rounded-lg border border-slate-300 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-blue-300 transition-colors" />
           <button type="submit"
             disabled={committing || !commitMessage.trim() || selectedFiles.length === 0}
-            class="shrink-0 rounded-lg bg-blue-300/20 px-4 py-1.5 text-sm font-semibold text-blue-500 transition-colors hover:bg-blue-300/30 disabled:opacity-40">
+            class="shrink-0 rounded-lg bg-blue-500 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-400 disabled:opacity-40">
             {committing ? 'Committing…' : 'Commit'}
           </button>
         </form>
@@ -201,7 +201,7 @@
         {/if}
       </div>
     {:else if !activeCommit}
-      <div class="rounded-xl border border-slate-400 bg-slate-900 px-4 py-4">
+      <div class="rounded-xl border border-slate-300 bg-slate-900 px-4 py-4">
         <p class="text-sm text-slate-100">No uncommitted changes.</p>
       </div>
     {/if}
@@ -209,10 +209,12 @@
     {#if activeCommit && data.status.changed.length > 0}
       <button
         onclick={() => viewCommit(activeCommit!)}
-        class="flex items-center gap-2 rounded-xl border border-slate-400 bg-slate-900 px-4 py-3 text-left text-sm text-slate-100 transition-colors hover:border-slate-600 hover:text-slate-100"
+        class="flex w-full items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-left text-sm text-amber-300 transition-colors hover:border-amber-500/50"
       >
-        <span class="text-slate-100">←</span>
-        <span>{data.status.changed.length} uncommitted change{data.status.changed.length !== 1 ? 's' : ''} — click to return</span>
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span class="font-medium">{data.status.changed.length}</span>
+        <span>uncommitted change{data.status.changed.length !== 1 ? 's' : ''}</span>
+        <svg class="ml-auto h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     {/if}
 
@@ -272,7 +274,7 @@
         {/each}
       </div>
     {:else if activeCommit}
-      <div class="rounded-xl border border-slate-400 bg-slate-900 px-4 py-4">
+      <div class="rounded-xl border border-slate-300 bg-slate-900 px-4 py-4">
         <p class="text-sm text-slate-100">No journal or rules changes in this commit.</p>
       </div>
     {/if}
@@ -280,8 +282,8 @@
 
   <!-- Right: commit log -->
   <div>
-    <div class="overflow-hidden rounded-xl border border-slate-400 bg-slate-900">
-      <p class="px-4 py-3 text-xs font-semibold tracking-wide text-slate-100 border-b border-slate-400">Recent commits</p>
+    <div class="overflow-hidden rounded-xl border border-slate-300 bg-slate-900">
+      <p class="px-4 py-3 text-xs font-semibold tracking-wide text-slate-100 border-b border-slate-300">Recent commits</p>
       {#if data.log.length === 0}
         <div class="px-4 py-6 text-center text-sm text-slate-100">No commits yet.</div>
       {:else}
@@ -295,7 +297,9 @@
                 <span class="font-mono text-xs text-slate-100">{commit.hash.slice(0, 7)}</span>
                 <span class="text-xs text-slate-100">{fmtDate(commit.date)}</span>
                 {#if activeCommit === commit.hash}
-                  <span class="ml-auto text-xs text-slate-100">click to close ×</span>
+                  <span class="ml-auto flex h-5 w-5 items-center justify-center rounded border border-slate-500 bg-slate-800 text-slate-300 transition-colors hover:border-rose-500 hover:bg-rose-500/10 hover:text-rose-400">
+                    <svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </span>
                 {/if}
               </div>
             </button>

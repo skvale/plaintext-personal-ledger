@@ -302,6 +302,9 @@
   }
 
   const inputCls = 'rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300';
+
+  // Accordion — current month expanded by default
+  let expandedMonths = $state<Record<string, boolean>>({ [new Date().toISOString().slice(0, 7)]: true });
 </script>
 
 <!-- ── Import panel ─────────────────────────────────────────────────────────── -->
@@ -891,8 +894,8 @@
               <button
                 type="button"
                 onclick={() => { billPostings = billPostings.filter((_, j) => j !== i); }}
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-100 transition-colors hover:text-slate-100"
-              >✕</button>
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-600 text-slate-400 transition-colors hover:border-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
+              ><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             {:else}
               <span style="width: 28px;"></span>
             {/if}
@@ -1064,13 +1067,28 @@
 {:else}
   <div class="flex flex-col gap-4">
     {#each data.monthGroups as group}
+      {@const isExpanded = expandedMonths[group.month] ?? false}
       {@const multiSection = group.sections.length > 1}
       <div class="overflow-hidden rounded-xl border border-slate-400 bg-slate-900">
-        <!-- Month header -->
-        <div class="border-b border-slate-400 px-5 py-3">
+        <!-- Month header — clickable accordion -->
+        <button
+          onclick={() => { expandedMonths[group.month] = !isExpanded; }}
+          class="flex w-full items-center justify-between border-b border-slate-400 px-5 py-3 text-left"
+        >
           <p class="text-xs font-semibold tracking-wide text-slate-100">{group.month}</p>
-        </div>
+          <svg
+            class="h-3.5 w-3.5 shrink-0 text-slate-100 transition-transform {isExpanded ? 'rotate-90' : ''}"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </button>
         <!-- Sections (statements, invoices, etc.) -->
+        {#if isExpanded}
         {#each group.sections as section}
           {#if multiSection && section.label}
             <p class="border-b border-slate-400/60 bg-slate-800/20 px-5 py-1.5 text-xs text-slate-100">{section.label}</p>
@@ -1088,7 +1106,7 @@
 
                 {#if file.ext === 'csv'}
                   {#if file.latestImport}
-                    <span class="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-500/70">
+                    <span class="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
                       <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                       Latest: {file.latestImport}
                     </span>
@@ -1181,6 +1199,7 @@
             {/each}
           </div>
         {/each}
+      {/if}
       </div>
     {/each}
   </div>

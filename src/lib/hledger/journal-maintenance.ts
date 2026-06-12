@@ -102,7 +102,7 @@ export async function sortJournal(): Promise<{
     return da.localeCompare(db);
   });
 
-  const sorted = header + "\n\n" + blocks.join("\n\n") + "\n";
+  const sorted = (header ? header + "\n\n" : "") + blocks.join("\n\n") + "\n";
   await writeFile(journalPath, sorted, "utf-8");
 
   try {

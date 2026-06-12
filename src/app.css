@@ -309,10 +309,10 @@
     --diff-ctx-hover:       rgba(255,255,255,0.03);
     --diff-ctx-text:        #8b95b0;
     --diff-ctx-num:         #3d4663;
-    --diff-ctx-border:      rgba(255,255,255,0.05);
+    --diff-ctx-border:      rgba(255,255,255,0.12);
     --diff-file-bg:         #0f1219;
-    --diff-card-bg:         #07090e;
-    --diff-card-border:     #1e2433;
+    --diff-card-bg:         #0a0d14;
+    --diff-card-border:     #4b5563;
     --diff-filename-text:   #dde2eb;
 
     /* ── Account badge colors (dark) ─────────────────────── */
@@ -336,13 +336,13 @@
     --btn-primary-bg:          #3b82f6;
     --btn-primary-text:        #ffffff;
     --btn-primary-hover:       #2563eb;
-    --btn-secondary-border:   #2d3548;
-    --btn-secondary-text:      #aab4cc;
+    --btn-secondary-border:   #8892a8;
+    --btn-secondary-text:      #dde2eb;
     --btn-secondary-hover-bg: #1e2433;
-    --btn-cancel-border:      #2d3548;
-    --btn-cancel-text:        #6b7a94;
-    --btn-cancel-hover-border: #3d4663;
-    --btn-cancel-hover-text:  #8b95b0;
+    --btn-cancel-border:      #8892a8;
+    --btn-cancel-text:        #dde2eb;
+    --btn-cancel-hover-border: #a8b2c4;
+    --btn-cancel-hover-text:  #f8fafc;
 
     /* ── Input colors (dark) ───────────────────────────── */
     --input-bg:                #0f1219;
