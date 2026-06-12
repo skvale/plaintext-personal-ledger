@@ -682,7 +682,8 @@ function normalizePreview(raw: string): string {
 // ─── .latest helpers ───────────────────────────────────────────────────────────
 
 /** Copy the rules-keyed .latest date into the CSV's directory so hledger's
- *  built-in dedup finds it regardless of the CSV filename. */
+ *  built-in dedup finds it. hledger looks for .latest.<CSV-FILENAME> in the
+ *  CSV dir, NOT .latest.<RULES-FILENAME>. */
 async function applyLatestFromRules(
   rulesFilename: string,
   csvPath: string,
@@ -691,8 +692,10 @@ async function applyLatestFromRules(
   try {
     const latestDate = await readFile(latestPath, "utf-8").then(s => s.trim());
     if (latestDate) {
-      // hledger with --rules-file looks for .latest.<RULES-FILE> in the CSV dir
-      const csvLatestPath = join(dirname(csvPath), `.latest.${rulesFilename}`);
+      const csvDir = dirname(csvPath);
+      const csvBasename = basename(csvPath);
+      // hledger reads .latest.<CSV-BASENAME> from the CSV directory
+      const csvLatestPath = join(csvDir, `.latest.${csvBasename}`);
       await writeFile(csvLatestPath, latestDate + "\n", "utf-8");
     }
   } catch {
@@ -865,7 +868,7 @@ export async function importCsvPreviewPath(
   });
 
   try {
-    // Let hledger find the rules-keyed .latest so dedup works per rules file
+  // Ensure CSV-keyed .latest is in place for hledger's built-in dedup
     await applyLatestFromRules(rulesFilename, csvAbs);
 
     const { stdout, stderr } = await execAsync(
