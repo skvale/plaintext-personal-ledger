@@ -44,7 +44,7 @@ export const actions: Actions = {
     const fd = await request.formData();
     const raw = (fd.get("tickers") as string) ?? "";
     const tickers = raw
-      .split(",")
+      .split(/[\n,]+/)
       .map((t) => t.trim().toUpperCase())
       .filter(Boolean);
 
@@ -69,7 +69,7 @@ export const actions: Actions = {
     }
 
     const tickers = raw
-      .split(",")
+      .split(/[\n,]+/)
       .map((t) => t.trim().toUpperCase())
       .filter(Boolean);
     if (tickers.length === 0) {

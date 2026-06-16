@@ -561,7 +561,7 @@
         out.push(`if ${item.patterns}`);
         if (item.assignments && item.assignments.length > 0) {
           for (const a of item.assignments) {
-            out.push(` ${a.key} ${a.value}`);
+            out.push(a.value ? ` ${a.key} ${a.value}` : ` ${a.key}`);
           }
         } else if (item.account) {
           out.push(` account2 ${item.account}`);
@@ -640,6 +640,8 @@
             const val = t.slice(sp + 1).trim();
             assignments.push({ key, value: val });
             if (/^account\d*$/.test(key) && !account) account = val;
+          } else if (t) {
+            assignments.push({ key: t, value: "" });
           }
           j++;
         }
@@ -758,6 +760,17 @@
     mark();
   }
 
+  function onSkipRule(id: string, skip: boolean) {
+    items = items.map((x) => {
+      if (x.type !== "rule" || x.id !== id) return x;
+      if (skip) {
+        return { ...x, account: "SKIP", assignments: [{ key: "SKIP", value: "" }] };
+      }
+      return { ...x, account: "", assignments: [{ key: "account2", value: "" }] };
+    });
+    mark();
+  }
+
   // Drag-and-drop state
   let activeDragId = $state<string | null>(null);
   const activeDragItem = $derived(
@@ -792,7 +805,12 @@
       const updated = { ...x, [field]: value };
       // Keep assignments in sync with account
       if (field === "account") {
+        if (value === "SKIP") {
+          return { ...updated, assignments: [{ key: "SKIP", value: "" }] };
+        }
         const assigns = [...(updated.assignments ?? [])];
+        const skipIdx = assigns.findIndex((a) => a.key === "SKIP");
+        if (skipIdx >= 0) assigns.splice(skipIdx, 1);
         const idx = assigns.findIndex((a) => a.key === "account2");
         if (idx >= 0) assigns[idx] = { ...assigns[idx], value };
         else assigns.unshift({ key: "account2", value });
@@ -893,6 +911,17 @@
     };
   }
 
+  function deleteEnhance(deletedFile: string) {
+    return async ({ result, update }: any) => {
+      if (result.type === "success" && result.data?.deleted) {
+        await update();
+        if (deletedFile === data.active) {
+          goto("/mappings");
+        }
+      }
+    };
+  }
+
   function renameEnhance(oldName: string) {
     return async ({ result, update }: any) => {
       if (result.type === "success" && result.data?.renamed) {
@@ -908,11 +937,11 @@
   }
 </script>
 
-<LearningBanner id="mappings" title="Auto-sorting imports">
-  Import mappings automatically sort your transactions into the right
-  categories. For example: "anything with WHOLE FOODS in the description goes to
-  expenses:food:groceries." The more mappings you add, the less manual sorting
-  you'll need to do after each import.
+<LearningBanner id="mappings" title="Auto-categorizing imports">
+  Import mappings automatically categorize your transactions into the right
+  accounts. For example: "anything with WHOLE FOODS in the description goes to
+  expenses:food:groceries." The more mappings you add, the less manual
+  categorization you'll need to do after each import.
 </LearningBanner>
 
 <div class="space-y-5">
@@ -1016,6 +1045,22 @@
             class="ml-1 inline-block text-slate-500 hover:text-slate-200 transition-colors"
             title="Rename">✎</button
           >
+          <form
+            method="POST"
+            action="?/delete"
+            use:enhance={deleteEnhance(file)}
+            class="inline"
+            onsubmit={(e) => {
+              if (!confirm(`Delete "${file}"?`)) e.preventDefault();
+            }}
+          >
+            <input type="hidden" name="filename" value={file} />
+            <button
+              type="submit"
+              class="ml-1 inline-block text-slate-500 hover:text-rose-400 transition-colors"
+              title="Delete"
+            >✕</button>
+          </form>
         </a>
       {/if}
     {/each}
@@ -1567,6 +1612,7 @@
                   accounts={allAccounts}
                   onupdate={(field, value) => updateRule(item.id, field, value)}
                   onremove={() => removeRule(item.id)}
+                  onskip={(id, skip) => onSkipRule(id, skip)}
                   onupdateassignment={(idx, field, val) =>
                     updateAssignment(item.id, idx, field, val)}
                   onaddassignment={() => addAssignment(item.id)}

@@ -226,6 +226,17 @@ export const actions: Actions = {
     return { createdFromCsv: rulesName };
   },
 
+  delete: async ({ request }) => {
+    const fd = await request.formData();
+    const filename = (fd.get('filename') as string | null) ?? '';
+    if (!filename) return fail(400, { deleteError: 'No filename' });
+
+    const result = await deleteRulesFile(filename);
+    if (!result.success) return fail(500, { deleteError: result.error ?? 'Delete failed' });
+
+    return { deleted: true };
+  },
+
   rename: async ({ request }) => {
     const fd = await request.formData();
     const oldName = (fd.get('oldName') as string | null) ?? '';

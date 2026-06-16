@@ -416,7 +416,7 @@
         When you import a CSV, a <strong>.rules file</strong> tells the system how to categorize each transaction.
         Patterns like "WHOLE FOODS" get matched to accounts like "expenses:food:groceries."
         <a href="/mappings" class="text-blue-500 hover:text-blue-500 underline">Edit your import mappings</a> to add
-        or change how transactions are sorted. The more mappings you have, the fewer transactions
+        or change how transactions are categorized. The more mappings you have, the fewer transactions
         end up in the triage queue.
       </LearningBanner>
 

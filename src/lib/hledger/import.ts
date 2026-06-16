@@ -615,6 +615,20 @@ export async function saveRulesFile(
   }
 }
 
+export async function deleteRulesFile(
+  filename: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!/^[\w./-]+\.rules$/.test(filename))
+    return { success: false, error: "Invalid filename" };
+  try {
+    const { unlink } = await import("node:fs/promises");
+    await unlink(join(JOURNAL_DIR, filename));
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 export async function renameRulesFile(
   oldName: string,
   newName: string,

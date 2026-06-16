@@ -10,9 +10,11 @@
   let editSaving = $state(false);
   let editError = $state('');
 
-  let tickerInput = $state(data.trackedTickers.join(', '));
+  let tickerEditing = $state(false);
+  let tickerDraft = $state('');
   let tickerSaving = $state(false);
   let tickerSaveError = $state('');
+  let tickerFetchValue = $derived(tickerEditing ? tickerDraft : data.trackedTickers.join('\n'));
 
   function todayLocal() {
     const d = new Date();
@@ -48,37 +50,65 @@
 
 <div class="mb-4 grid grid-cols-2 gap-4">
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-5">
-    <p class="mb-3 text-xs font-semibold tracking-wide text-slate-100">Tracked Tickers</p>
-    <div class="mb-2">
-      <input
-        bind:value={tickerInput}
-        class="w-full rounded-lg border border-slate-300 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-blue-300"
-        placeholder=""
-      />
+    <div class="mb-3 flex items-center justify-between">
+      <p class="text-xs font-semibold tracking-wide text-slate-100">Tracked Tickers</p>
+      {#if !tickerEditing}
+        <button
+          onclick={() => { tickerDraft = data.trackedTickers.join('\n'); tickerEditing = true; tickerSaveError = ''; }}
+          class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100"
+        >Edit</button>
+      {/if}
     </div>
-    {#if tickerSaveError}
-      <p class="mb-2 text-xs text-rose-400">{tickerSaveError}</p>
+
+    {#if tickerEditing}
+      <div class="mb-2">
+        <textarea
+          bind:value={tickerDraft}
+          class="w-full rounded-lg border border-slate-300 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-blue-300 resize-y"
+          rows="4"
+          placeholder="AAPL, GOOGL, MSFT …"
+        ></textarea>
+      </div>
+      {#if tickerSaveError}
+        <p class="mb-2 text-xs text-rose-400">{tickerSaveError}</p>
+      {/if}
+      <div class="flex gap-2">
+        <button
+          onclick={async () => {
+            tickerSaving = true;
+            tickerSaveError = '';
+            const fd = new FormData();
+            fd.set('tickers', tickerDraft);
+            const res = await fetch('?/saveTickers', { method: 'POST', body: fd });
+            tickerSaving = false;
+            if (!res.ok) {
+              tickerSaveError = 'Save failed';
+              return;
+            }
+            tickerEditing = false;
+          }}
+          disabled={tickerSaving}
+          class="rounded-md bg-blue-300/10 px-3 py-1.5 text-xs font-medium text-blue-500 hover:bg-blue-300/20 disabled:opacity-40"
+        >{tickerSaving ? 'Saving…' : 'Save'}</button>
+        <button
+          type="button"
+          onclick={() => { tickerEditing = false; tickerSaveError = ''; }}
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-100 transition-colors hover:border-slate-400"
+        >Cancel</button>
+      </div>
+    {:else if data.trackedTickers.length > 0}
+      <div class="space-y-1">
+        {#each data.trackedTickers as ticker}
+          <div class="font-mono text-sm text-slate-100">{ticker}</div>
+        {/each}
+      </div>
+    {:else}
+      <p class="py-8 text-center text-sm text-slate-100">No tickers tracked — click Edit to add some</p>
     {/if}
-    <button
-      onclick={async () => {
-        tickerSaving = true;
-        tickerSaveError = '';
-        const fd = new FormData();
-        fd.set('tickers', tickerInput);
-        const res = await fetch('?/saveTickers', { method: 'POST', body: fd });
-        tickerSaving = false;
-        if (!res.ok) {
-          tickerSaveError = 'Save failed';
-          return;
-        }
-      }}
-      disabled={tickerSaving}
-      class="rounded-md bg-blue-300/10 px-3 py-1.5 text-xs font-medium text-blue-500 hover:bg-blue-300/20 disabled:opacity-40"
-    >{tickerSaving ? 'Saving…' : 'Save Tickers'}</button>
   </div>
 
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-5">
-    <p class="mb-3 text-xs font-semibold tracking-wide text-slate-100">Fetch Latest Prices</p>
+    <p class="mb-3 text-xs font-semibold tracking-wide text-slate-100">Fetch Prices for</p>
     <form
       method="POST"
       action="?/populate"
@@ -106,7 +136,7 @@
           max={todayLocal()}
           class="w-40 rounded-lg border border-slate-300 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-300"
         />
-        <input type="hidden" name="tickers" value={tickerInput} />
+        <input type="hidden" name="tickers" value={tickerFetchValue} />
         <button
           type="submit"
           disabled={fetching}
@@ -189,3 +219,4 @@
     <p class="py-8 text-center text-sm text-slate-100">pricing.journal is empty — click Edit to add price directives</p>
   {/if}
 </div>
+

@@ -132,6 +132,7 @@ export {
   appendRule,
   saveRulesFile,
   renameRulesFile,
+  deleteRulesFile,
   rulesFileExists,
   importCsvPreview,
   importCsvConfirm,

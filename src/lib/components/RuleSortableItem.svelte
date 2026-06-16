@@ -9,6 +9,7 @@
     accounts,
     onupdate,
     onremove,
+    onskip,
     onupdateassignment,
     onaddassignment,
     onremoveassignment,
@@ -19,6 +20,7 @@
     accounts: string[];
     onupdate: (field: 'patterns' | 'account', value: string) => void;
     onremove: () => void;
+    onskip: (id: string, skip: boolean) => void;
     onupdateassignment: (idx: number, field: 'key' | 'value', val: string) => void;
     onaddassignment: () => void;
     onremoveassignment: (idx: number) => void;
@@ -35,8 +37,9 @@
     })
   );
 
+  const isSkip = $derived((item.assignments ?? []).some(a => a.key === 'SKIP'));
   let expanded = $state(false);
-  const extraAssignments = $derived((item.assignments ?? []).filter(a => a.key !== 'account2'));
+  const extraAssignments = $derived((item.assignments ?? []).filter(a => a.key !== 'account2' && a.key !== 'SKIP'));
   const hasExtra = $derived(extraAssignments.length > 0);
   const isAccountField = (key: string) => /^account\d+$/.test(key);
 </script>
@@ -64,35 +67,61 @@
 
       <span class="shrink-0 text-sm text-slate-100">→</span>
 
-      <div class="flex-1 min-w-0">
-        <Combobox
-          items={accounts}
-          value={item.account}
-          onchange={(val) => onupdate('account', val)}
-          oncreate={oncreateaccount}
-          placeholder="expenses:…"
-          inputClass="w-full border border-slate-300 rounded-md bg-slate-900 px-2 py-1 pr-6 font-mono text-sm text-emerald-400/80 placeholder:text-slate-100 focus:border-blue-300 outline-none"
-        />
-      </div>
-
-      {#if hasExtra}
-        <button
-          type="button"
-          onclick={() => (expanded = !expanded)}
-          class="flex h-7 shrink-0 items-center gap-1 rounded-md border border-blue-300/30 bg-blue-300/5 px-2 text-xs font-mono text-blue-500 transition-colors hover:bg-blue-300/10"
-        >
-          <svg class="h-3 w-3 transition-transform {expanded ? 'rotate-180' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
-          +{extraAssignments.length}
-        </button>
+      {#if isSkip}
+        <div class="flex-1 min-w-0">
+          <span
+            class="inline-block w-full rounded-md border border-slate-500 bg-slate-900 px-2 py-1 font-mono text-sm italic text-slate-500"
+            >SKIP</span
+          >
+        </div>
       {:else}
-        <button
-          type="button"
-          onclick={() => { onaddassignment(); expanded = true; }}
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-400 text-slate-100 opacity-0 group-hover:opacity-100 transition-all hover:border-slate-600 hover:text-slate-100"
-          title="Add extra fields"
-        >
-          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
+        <div class="flex-1 min-w-0">
+          <Combobox
+            items={accounts}
+            value={item.account}
+            onchange={(val) => onupdate('account', val)}
+            oncreate={oncreateaccount}
+            placeholder="expenses:…"
+            inputClass="w-full border border-slate-300 rounded-md bg-slate-900 px-2 py-1 pr-6 font-mono text-sm text-emerald-400/80 placeholder:text-slate-100 focus:border-blue-300 outline-none"
+          />
+        </div>
+      {/if}
+
+      <button
+        type="button"
+        onclick={() => onskip(id, !isSkip)}
+        class="flex h-7 w-7 shrink-0 items-center justify-center rounded border text-xs transition-colors {isSkip
+          ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
+          : 'border-slate-400 text-slate-100 opacity-0 group-hover:opacity-100 hover:border-slate-600 hover:text-slate-100'}"
+        title={isSkip ? 'Remove skip' : 'Skip transactions matching this pattern'}
+      >
+        {#if isSkip}
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m1 1 22 22M16 16a4 4 0 0 1-8 0M16 8a4 4 0 0 0-8 0"/><path d="M8 8v4"/></svg>
+        {:else}
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        {/if}
+      </button>
+
+      {#if !isSkip}
+        {#if hasExtra}
+          <button
+            type="button"
+            onclick={() => (expanded = !expanded)}
+            class="flex h-7 shrink-0 items-center gap-1 rounded-md border border-blue-300/30 bg-blue-300/5 px-2 text-xs font-mono text-blue-500 transition-colors hover:bg-blue-300/10"
+          >
+            <svg class="h-3 w-3 transition-transform {expanded ? 'rotate-180' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            +{extraAssignments.length}
+          </button>
+        {:else}
+          <button
+            type="button"
+            onclick={() => { onaddassignment(); expanded = true; }}
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-400 text-slate-100 opacity-0 group-hover:opacity-100 transition-all hover:border-slate-600 hover:text-slate-100"
+            title="Add extra fields"
+          >
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        {/if}
       {/if}
 
       <button
@@ -108,7 +137,7 @@
     {#if expanded && hasExtra}
       <div class="border-t border-slate-400 px-3 py-2 pl-9 space-y-1.5">
         {#each (item.assignments ?? []) as assign, i}
-          {#if assign.key !== 'account2'}
+          {#if assign.key !== 'account2' && assign.key !== 'SKIP'}
             <div class="flex items-center gap-2">
               <input
                 type="text"

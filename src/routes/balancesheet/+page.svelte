@@ -61,7 +61,7 @@
         pointRadius: 3,
         pointBackgroundColor: '#3b82f6',
         fill: true,
-        tension: 0.4
+        tension: 0.15
       }]
     },
     options: {
