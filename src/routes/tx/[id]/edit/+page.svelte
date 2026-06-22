@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
-  import { enhance } from '$app/forms';
+  import { enhance, applyAction } from '$app/forms';
   import { page } from '$app/stores';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
@@ -118,9 +118,9 @@
         amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
       }))));
       submitting = true;
-      return async ({ update }) => {
+      return async ({ result }) => {
         submitting = false;
-        await update();
+        await applyAction(result);
       };
     }}
     class="flex flex-col gap-5"
