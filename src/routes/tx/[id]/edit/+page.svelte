@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
-  import { enhance, applyAction } from '$app/forms';
+  import { enhance } from '$app/forms';
+  import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
@@ -118,9 +119,13 @@
         amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
       }))));
       submitting = true;
-      return async ({ result }) => {
-        submitting = false;
-        await applyAction(result);
+      return async ({ result, update }) => {
+        if (result.type === 'redirect') {
+          await goto((result as { location: string }).location);
+        } else {
+          submitting = false;
+          await update();
+        }
       };
     }}
     class="flex flex-col gap-5"

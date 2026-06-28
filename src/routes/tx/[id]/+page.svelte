@@ -552,8 +552,7 @@
             return async ({ result, update }) => {
               editSaving = false;
               if (result.type === 'success') { editingRaw = false; editError = ''; await invalidateAll(); }
-              else if (result.type === 'failure') { editError = (result.data as any)?.editError ?? 'Update failed'; }
-              await update();
+              else if (result.type === 'failure') { editError = (result.data as any)?.editError ?? 'Update failed'; await update(); }
             };
           }}
         >

@@ -23,22 +23,24 @@ export async function run(args: string[]): Promise<string> {
 }
 
 async function runImpl(args: string[], key: string): Promise<string> {
-  const { exec } = await import("node:child_process");
-  const { promisify } = await import("node:util");
-  const execAsync = promisify(exec);
+  const { spawn } = await import("node:child_process");
   const { JOURNAL } = await import("./journal.js");
 
   try {
-    const { stdout } = await execAsync(
-      `hledger -f "${JOURNAL}" ${args.join(" ")}`,
-      { maxBuffer: 50 * 1024 * 1024 },
-    );
+    const stdout = await new Promise<string>((resolve, reject) => {
+      const child = spawn("hledger", ["-f", JOURNAL, ...args], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stdout = "";
+      child.stdout.on("data", (data) => { stdout += data.toString(); });
+      child.on("error", reject);
+      child.on("close", () => resolve(stdout));
+    });
     const result = stdout.trim();
     cache.set(key, { data: result, ts: Date.now() });
     return result;
-  } catch (e: any) {
-    // hledger exits non-zero when a query returns no results
-    return e.stdout?.trim() ?? "";
+  } catch {
+    return "";
   } finally {
     inflight.delete(key);
   }
