@@ -34,7 +34,7 @@
     : posPostings.length > 1 ? (posPostings.find(p => p.account.startsWith('expenses') || p.account.startsWith('income'))?.account ?? posPostings[0].account)
     : (account ?? sorted[0]?.account ?? '')
   );
-  const amtColor = $derived(amountColor(amount, amtAccount));
+  const amtColor = $derived(amountColor(amount, amtAccount, postings));
 
   const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
   const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
@@ -68,7 +68,7 @@
             <div class="flex items-center gap-1.5 whitespace-nowrap {tpi > 0 ? 'mt-0.5' : ''}">
               <span class="h-1.5 w-1.5 shrink-0 rounded-full {accountDotClass(tp.account)}"></span>
               <span class="font-mono text-xs {accountColor(tp.account)}">{tp.account}</span>
-              <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
+               <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account, postings)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
             </div>
           {/each}
         </div>

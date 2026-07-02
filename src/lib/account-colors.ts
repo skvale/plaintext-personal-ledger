@@ -68,10 +68,18 @@ export function accountSortKey(acct: string): number {
   return order[t] ?? 5;
 }
 
+/** Check if transaction is between two assets (transfer) */
+export function isAssetTransfer(postings: Array<{ account: string; amount: number }>): boolean {
+  const assetPostings = postings.filter(p => accountType(p.account) === "assets");
+  return assetPostings.length >= 2 && postings.length === assetPostings.length;
+}
+
 /** Color for an amount based on its account context */
-export function amountColor(amount: number, acct: string): string {
+export function amountColor(amount: number, acct: string, postings?: Array<{ account: string; amount: number }>): string {
   if (amount === 0) return "text-slate-100";
   const t = accountType(acct);
+  // Asset-to-asset transfers get neutral color
+  if (postings && isAssetTransfer(postings)) return "text-slate-100";
   // Money flowing out = rose, money flowing in = emerald
   // expenses: positive = out, negative = in (reimbursement)
   // income:   negative = in, positive = out (reversal)

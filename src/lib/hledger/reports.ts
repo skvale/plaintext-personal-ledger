@@ -552,13 +552,13 @@ export async function getNetWorthHistory(): Promise<
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
-export async function getPortfolioData(): Promise<{
+export async function getPortfolioData(months: number = 12): Promise<{
   accounts: { name: string; balance: number }[];
   costAccounts: { name: string; balance: number }[];
   history: { month: string; total: number }[];
   costHistory: { month: string; total: number }[];
 }> {
-  const range = lastNMonths(13);
+  const range = lastNMonths(months);
   const [mktSnapshot, costSnapshot, mktHistJson, costHistJson] = await Promise.all([
     runJson<any>(["bal", "-V", "assets:investments", "--flat"]),
     runJson<any>(["bal", "-B", "assets:investments", "--flat"]),
@@ -714,9 +714,9 @@ export interface UnrealizedGains {
   monthly: { month: string; cumulative: number }[];
 }
 
-export async function getUnrealizedGains(): Promise<UnrealizedGains> {
+export async function getUnrealizedGains(months: number = 12): Promise<UnrealizedGains> {
   const now = new Date();
-  const range = lastNMonths(13);
+  const range = lastNMonths(months);
 
   const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson] = await Promise.all([
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),

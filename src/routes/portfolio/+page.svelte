@@ -1,14 +1,22 @@
 <script lang="ts">
   import Chart from '$lib/Chart.svelte';
+  import { goto } from '$app/navigation';
   import { theme } from '$lib/theme.svelte.js';
   import LearningBanner from '$lib/components/LearningBanner.svelte';
   import AccountBadge from '$lib/components/AccountBadge.svelte';
   import TransactionRow from '$lib/components/TransactionRow.svelte';
+  import MonthSelector from '$lib/components/MonthSelector.svelte';
   import { page } from '$app/stores';
   import { parseCommodity, formatAmount } from '$lib/format.js';
   import Amount from '$lib/components/Amount.svelte';
 
   let { data } = $props();
+
+  const monthCount = $derived(data.monthCount ?? 1);
+
+  function setMonths(n: number) {
+    goto(`/portfolio?months=${n}`, { replaceState: true, noScroll: true });
+  }
 
   const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
   const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
@@ -24,6 +32,12 @@
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  function fmtMonth(ym: string) {
+    const [y, m] = ym.split('-');
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${names[parseInt(m) - 1]} ${y}`;
+  }
+
   function shortName(name: string) {
     return name.split(':').slice(2).join(':') || name.split(':').pop() || name;
   }
@@ -37,6 +51,15 @@
   function fmtSigned(n: number) {
     return (n >= 0 ? '+' : '−') + fmt(n);
   }
+
+  const monthlyGains = $derived(data.tableGains ?? []);
+  let tableScroll: HTMLDivElement | undefined = $state();
+
+  $effect(() => {
+    if (tableScroll && monthlyGains.length > 0) {
+      tableScroll.scrollLeft = tableScroll.scrollWidth;
+    }
+  });
 
 
 
@@ -129,10 +152,45 @@
   and how your total portfolio is performing — all in one place.
 </LearningBanner>
 
-<div class="mb-6">
-  <h1 class="text-xl font-semibold text-slate-100">Portfolio</h1>
-  <a href="/pricing" class="mt-1 inline-block text-xs text-slate-100 hover:text-slate-100">Set market prices for each fund →</a>
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-100">Portfolio</h1>
+    <a href="/pricing" class="mt-1 inline-block text-xs text-slate-100 hover:text-slate-100">Set market prices for each fund →</a>
+  </div>
+  <MonthSelector value={monthCount} options={[1, 3, 6, 12, 0]} onchange={setMonths} />
 </div>
+
+<!-- Monthly gain/loss table (hidden when Current selected) -->
+{#if monthCount !== 1 && monthlyGains.length > 0}
+  <div class="mb-4 rounded-xl border border-slate-400 bg-slate-900 overflow-hidden">
+    <div bind:this={tableScroll} class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-black/[0.08] dark:border-white/[0.06] text-left">
+            <th class="px-5 py-3 font-medium text-slate-100 whitespace-nowrap sticky left-0 bg-slate-900 z-10">Month</th>
+            {#each monthlyGains as mg}
+              <th class="px-4 py-3 font-medium text-slate-100 text-right whitespace-nowrap">{fmtMonth(mg.month)}</th>
+            {/each}
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-black/[0.08] dark:border-white/[0.06]">
+            <td class="px-5 py-2.5 font-mono text-sm font-semibold text-slate-100 sticky left-0 bg-slate-900 z-10">Gain/Loss</td>
+            {#each monthlyGains as mg}
+              <td class="px-4 py-2.5 text-right font-mono text-sm whitespace-nowrap {mg.gain >= 0 ? 'text-emerald-400' : 'text-rose-400'}">{fmtSigned(mg.gain)}</td>
+            {/each}
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="border-t-2 border-slate-300">
+            <td class="px-5 py-3 text-sm font-semibold text-slate-100 sticky left-0 bg-slate-900 z-10">Total</td>
+              <td class="px-4 py-3 text-right font-mono text-sm font-semibold whitespace-nowrap {data.tableTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}" colspan={monthlyGains.length}>{fmtSigned(data.tableTotal)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+{/if}
 
 <!-- Summary cards -->
 <div class="mb-6 grid grid-cols-4 gap-3">
@@ -143,11 +201,11 @@
   </div>
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-4">
     <p class="mb-2 text-xs font-semibold tracking-wide text-slate-100">Total Gain/Loss</p>
-    <p class="text-xl font-medium {data.gains.total >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-      {fmtSigned(data.gains.total)}
+    <p class="text-xl font-medium {data.totalGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+      {fmtSigned(data.totalGain)}
     </p>
-    <p class="mt-1 font-mono text-xs {data.gains.total >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-      {fmtPct(data.gains.total, costBasis)}
+    <p class="mt-1 font-mono text-xs {data.totalGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+      {fmtPct(data.totalGain, costBasis)}
     </p>
   </div>
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-4">

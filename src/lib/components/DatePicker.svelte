@@ -111,14 +111,14 @@
                 <DatePicker.GridRow class="flex">
                   {#each weekDates as date}
                     <DatePicker.Cell {date} month={month.value} class="relative p-0">
-                      <DatePicker.Day
-                        class="flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors
-                          text-slate-100 hover:bg-slate-800
-                          data-[today]:font-bold data-[today]:text-blue-500
-                          data-[selected]:bg-blue-600 data-[selected]:text-white data-[selected]:hover:bg-blue-700
-                          data-[outside-month]:text-slate-100 data-[outside-month]:hover:bg-slate-800/50
-                          data-[disabled]:text-slate-100 data-[disabled]:pointer-events-none"
-                      >{date.day}</DatePicker.Day>
+                       <DatePicker.Day
+                         class="flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors
+                           text-slate-100 hover:bg-slate-800
+                           data-[today]:font-bold data-[today]:text-blue-300
+                           data-[selected]:bg-blue-600 data-[selected]:text-white data-[selected]:hover:bg-blue-700
+                           data-[outside-month]:text-slate-100 data-[outside-month]:hover:bg-slate-800/50
+                           data-[disabled]:text-slate-100 data-[disabled]:pointer-events-none"
+                       >{date.day}</DatePicker.Day>
                     </DatePicker.Cell>
                   {/each}
                 </DatePicker.GridRow>

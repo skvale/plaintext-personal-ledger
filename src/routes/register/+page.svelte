@@ -394,7 +394,7 @@
                   <div class="flex items-center gap-1.5 whitespace-nowrap {tpi > 0 ? 'mt-0.5' : ''}">
                     <span class="h-1.5 w-1.5 shrink-0 rounded-full {accountDotClass(tp.account)}"></span>
                     <span class="font-mono text-xs {accountColor(tp.account)}">{tp.account}</span>
-                    <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
+                     <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account, txn.postings)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
                   </div>
                 {/each}
               </div>
@@ -411,7 +411,7 @@
                   <div class="flex items-center gap-1.5 whitespace-nowrap {tpi > 0 ? 'mt-0.5' : ''}">
                     <span class="h-1.5 w-1.5 shrink-0 rounded-full {accountDotClass(tp.account)}"></span>
                     <span class="font-mono text-xs {accountColor(tp.account)}">{tp.account}</span>
-                    <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
+                     <span class="ml-auto pl-4 text-xs tabular-nums text-right {amountColor(tp.amount, tp.account, txn.postings)}">{tp.amount < 0 ? '−' : ''}{fmt(tp.amount)}</span>
                   </div>
                 {/each}
               </div>
@@ -428,7 +428,7 @@
               : vis.filter(p => p.amount !== 0)}
             {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
             {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : (primary?.account ?? '')}
-            <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount)} />
+             <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} />
           {/if}
         </div>
       </a>
