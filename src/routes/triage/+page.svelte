@@ -14,15 +14,16 @@
   type RowState = { saving: boolean; saved: boolean; error: string };
   let rowStates = $state<Record<number, RowState>>({});
 
-  // Pre-fill account from suggestions
+  // Pre-fill account from suggestions (only for new rows the user hasn't touched)
   let rowAccounts = $state<Record<number, string>>({});
+  let touchedRows = $state<Set<number>>(new Set());
   $effect(() => {
-    rowAccounts = Object.fromEntries(
-      data.transactions.map((t: UncategorizedTxn) => [
-        t.tindex,
-        (data.suggestions as Record<string, { account: string; source: string }>)[t.description]?.account ?? ''
-      ])
-    );
+    const suggestions = data.suggestions as Record<string, { account: string; source: string }>;
+    for (const t of data.transactions as UncategorizedTxn[]) {
+      if (!touchedRows.has(t.tindex)) {
+        rowAccounts[t.tindex] = suggestions[t.description]?.account ?? '';
+      }
+    }
   });
 
   // Pending bulk apply after a single save
@@ -248,7 +249,7 @@
                 <Combobox
                   items={triageAccounts}
                   value={rowAccounts[txn.tindex] ?? ''}
-                  onchange={(v) => (rowAccounts[txn.tindex] = v)}
+                  onchange={(v) => { rowAccounts[txn.tindex] = v; touchedRows.add(txn.tindex); touchedRows = touchedRows; }}
                   name="account"
                   placeholder="expenses:…"
                   disabled={state.saving || state.saved}

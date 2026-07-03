@@ -670,30 +670,41 @@
         {/if}
 
         {#if previewCount > 0}
-          <form method="POST" action="?/confirm" use:enhance={() => {
-            isLoading = true;
-            importError = '';
-            persistNewAccounts();
-            return async ({ result }) => {
+          <button
+            type="button"
+            disabled={isLoading}
+            onclick={async () => {
+              isLoading = true;
+              importError = '';
+              await persistNewAccounts();
+              // Save pending mappings to rules file before import
+              const pendingMappings = Object.entries(mappingEdits)
+                .filter(([, v]) => v)
+                .map(([desc, account]) => ({ pattern: patternEdits[desc] ?? desc, account }));
+              if (pendingMappings.length > 0 && selectedRulesFile) {
+                const mfd = new FormData();
+                mfd.set('rulesFile', selectedRulesFile);
+                mfd.set('mappings', JSON.stringify(pendingMappings));
+                await fetch('?/addMappings', { method: 'POST', body: mfd });
+              }
+              const cfd = new FormData();
+              cfd.set('token', previewToken);
+              const cRes = await fetch('?/confirm', { method: 'POST', body: cfd });
+              const cJson = await cRes.json();
+              const cData = cJson?.data ? (typeof cJson.data === 'string' ? JSON.parse(cJson.data) : cJson.data) : null;
               isLoading = false;
-              if (result.type === 'success') {
+              if (cData?.importError) {
+                importError = cData.importError;
+              } else {
                 importSuccess = true;
                 previewToken = '';
                 invalidateAll();
-              } else if (result.type === 'failure') {
-                importError = (result.data as any)?.importError ?? 'Import failed.';
               }
-            };
-          }}>
-            <input type="hidden" name="token" value={previewToken} />
-            <button
-              type="submit"
-              disabled={isLoading}
-              class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? 'Importing…' : `Import ${previewCount} transaction${previewCount === 1 ? '' : 's'}`}
-            </button>
-          </form>
+            }}
+            class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? 'Importing…' : `Import ${previewCount} transaction${previewCount === 1 ? '' : 's'}`}
+          </button>
         {/if}
       </div>
     {/if}

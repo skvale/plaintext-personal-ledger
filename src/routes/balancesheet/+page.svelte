@@ -101,7 +101,7 @@
 
 <div class="mb-6 flex items-center justify-between">
   <h1 class="text-xl font-semibold text-slate-100 flex items-center gap-2">Balance Sheet <span class="text-sm font-normal text-slate-100">net worth = </span><AccountBadge account="assets" size="lg" /> <span class="text-slate-100">&minus;</span> <AccountBadge account="liabilities" size="lg" /></h1>
-  <MonthSelector value={monthCount} options={[1, 3, 6]} onchange={setMonths} />
+  <MonthSelector value={monthCount} options={[1, 3, 6, 12, 0]} onchange={setMonths} />
 </div>
 
 {#if monthCount <= 1}
