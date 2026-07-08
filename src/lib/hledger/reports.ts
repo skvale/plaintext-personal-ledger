@@ -342,10 +342,11 @@ export async function getMultiMonthPnL(
       if (!name) continue;
       const depth = name.split(":").length - 1;
       if (depth === 0) continue;
-      const amounts = dates.map((_: any, i: number) =>
-        Math.abs(pickAmount(row.prrAmounts?.[i])),
-      );
-      if (amounts.some((a) => a > 0)) raw.push({ name, depth, type, amounts });
+      const amounts = dates.map((_: any, i: number) => {
+        const raw = pickAmount(row.prrAmounts?.[i]);
+        return raw;
+      });
+      if (amounts.some((a) => a !== 0)) raw.push({ name, depth, type, amounts });
     }
     raw.sort((a, b) => a.name.localeCompare(b.name));
     return raw;
@@ -357,10 +358,10 @@ export async function getMultiMonthPnL(
   ];
 
   const incomeTotals = dates.map((_: any, i: number) =>
-    Math.abs(pickAmount(revSub?.prTotals?.prrAmounts?.[i])),
+    pickAmount(revSub?.prTotals?.prrAmounts?.[i]),
   );
   const expenseTotals = dates.map((_: any, i: number) =>
-    Math.abs(pickAmount(expSub?.prTotals?.prrAmounts?.[i])),
+    pickAmount(expSub?.prTotals?.prrAmounts?.[i]),
   );
   const netTotals = dates.map(
     (_: any, i: number) => incomeTotals[i] - expenseTotals[i],

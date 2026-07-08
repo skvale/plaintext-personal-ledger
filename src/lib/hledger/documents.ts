@@ -7,7 +7,7 @@ import {
   access,
   unlink,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { runJson } from "./cache.js";
 import { extractTag } from "./parsing.js";
 import { STATEMENTS_DIR, READ_JOURNAL, getWriteJournal } from "./journal.js";
@@ -645,7 +645,7 @@ export async function updateTransaction(
   const resolved = await resolveTransactionBlock(String(id));
   if (!resolved)
     return { success: false, error: "Transaction not found in main journal" };
-  const { lines, block, original } = resolved;
+  const { lines, block, segments } = resolved;
 
   const oldHeader = lines[block.start];
   const headerCommentMatch = oldHeader.match(/\s+(;.*)$/);
@@ -693,42 +693,36 @@ export async function updateTransaction(
     newLines.push(fmtPosting(p.account, amt || undefined, cleared));
   }
 
-  // Determine which file to write to based on where the transaction is located
-  const writeJournal = await getWriteJournal();
-  const writeJournalContent = await readFile(writeJournal, "utf-8");
-  const writeLines = writeJournalContent.split("\n");
-  
-  // Check if transaction exists in write journal
-  const idStr = String(id);
-  const blockInWrite = typeof block.tindex === 'number'
-    ? findTransactionBlock(writeLines, block.tindex)
-    : findTransactionBlockByTxid(writeLines, idStr);
-  
-  let targetFile: string;
-  let targetLines: string[];
-  
-  if (blockInWrite) {
-    // Transaction found in write journal - write there directly
-    targetFile = writeJournal;
-    targetLines = writeLines;
-    const blockIdx = blockInWrite;
-    targetLines.splice(blockIdx.start, blockIdx.end - blockIdx.start, ...newLines);
-  } else {
-    // Transaction not in write journal - append to write journal
-    targetFile = writeJournal;
-    targetLines = [...writeLines, "", ...newLines];
-  }
-  
-  const updated = targetLines;
-  
+  // Find which file this transaction belongs to using segments
+  const seg = segments.find(
+    (s) => s.start <= block.start && block.end <= s.end,
+  );
+  if (!seg)
+    return { success: false, error: "Transaction not found in any known file" };
+
+  const targetFile = seg.file;
+  const targetContent = await readFile(targetFile, "utf-8");
+  const targetLines = targetContent.split("\n");
+
+  // Adjust block positions from expanded allLines to local file line numbers
+  const localStart = block.start - seg.start;
+  const localEnd = block.end - seg.start;
+
+  const updated = [
+    ...targetLines.slice(0, localStart),
+    ...newLines,
+    ...targetLines.slice(localEnd),
+  ];
+
   await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${writeJournal}" check`);
-    await sortJournalByDate();
+    await execAsync(`hledger -f "${targetFile}" check`, { timeout: 15000 });
+    const writeJournal = await getWriteJournal();
+    if (targetFile === writeJournal) await sortJournalByDate();
     invalidateCache();
     return { success: true, txid };
   } catch (e: any) {
-    await writeFile(targetFile, original, "utf-8");
+    await writeFile(targetFile, targetContent, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
     return {
       success: false,
@@ -748,49 +742,43 @@ export async function updateTransactionRaw(
   const resolved = await resolveTransactionBlock(String(id));
   if (!resolved)
     return { success: false, error: "Transaction not found in main journal" };
-  const { lines, block, original } = resolved;
+  const { lines, block, segments } = resolved;
 
   const newLines = rawText.split("\n").filter((l, i, arr) => {
     if (i === arr.length - 1 && l.trim() === "") return false;
     return true;
   });
 
-  // Determine which file to write to
-  const writeJournal = await getWriteJournal();
-  const writeJournalContent = await readFile(writeJournal, "utf-8");
-  const writeLines = writeJournalContent.split("\n");
-  
-  const idStr = String(id);
-  const blockInWrite = typeof block.tindex === 'number'
-    ? findTransactionBlock(writeLines, block.tindex)
-    : findTransactionBlockByTxid(writeLines, idStr);
-  
-  let targetFile: string;
-  let targetLines: string[];
-  
-  if (blockInWrite) {
-    targetFile = writeJournal;
-    targetLines = writeLines;
-  } else {
-    targetFile = READ_JOURNAL;
-    targetLines = lines;
-  }
-  
-  const blockIdx = blockInWrite || block;
+  // Find which file this transaction belongs to using segments
+  const seg = segments.find(
+    (s) => s.start <= block.start && block.end <= s.end,
+  );
+  if (!seg)
+    return { success: false, error: "Transaction not found in any known file" };
+
+  const targetFile = seg.file;
+  const targetContent = await readFile(targetFile, "utf-8");
+  const targetLines = targetContent.split("\n");
+
+  // Adjust block positions from expanded allLines to local file line numbers
+  const localStart = block.start - seg.start;
+  const localEnd = block.end - seg.start;
+
   const updated = [
-    ...targetLines.slice(0, blockIdx.start),
+    ...targetLines.slice(0, localStart),
     ...newLines,
-    ...targetLines.slice(blockIdx.end),
+    ...targetLines.slice(localEnd),
   ];
-  
+
   await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${writeJournal}" check`);
-    await sortJournalByDate();
+    await execAsync(`hledger -f "${targetFile}" check`, { timeout: 15000 });
+    const writeJournal = await getWriteJournal();
+    if (targetFile === writeJournal) await sortJournalByDate();
     invalidateCache();
     return { success: true };
   } catch (e: any) {
-    await writeFile(targetFile, original, "utf-8");
+    await writeFile(targetFile, targetContent, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
     return {
       success: false,
@@ -877,8 +865,6 @@ export async function deleteTransaction(
 }
 
 // ─── Document Delete ─────────────────────────────────────────────────────────
-
-import { resolve } from "node:path";
 
 export async function deleteDocument(
   relPath: string,

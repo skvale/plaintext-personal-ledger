@@ -168,6 +168,10 @@ export function normaliseAmount(amt: string): string {
     const right = normaliseAmount(eqMatch[2].trim());
     return `${left} = ${right}`;
   }
+  // Normalize sign placement: +$180 → $180, -$180 → $-180
+  amt = amt.replace(/^\+/, '');
+  amt = amt.replace(/^-([^\d\s.,])/, '$1-');
+
   // Already has a currency symbol or commodity — leave it alone
   if (/[^0-9.\-,\s]/.test(amt)) return amt;
   // Bare number: add $ and commas

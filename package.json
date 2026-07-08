@@ -29,6 +29,7 @@
     "@dnd-kit-svelte/core": "^0.0.11",
     "@dnd-kit-svelte/sortable": "^0.0.11",
     "@dnd-kit-svelte/utilities": "^0.0.11",
+    "@iiatlas/hledger-fmt": "^2.0.2",
     "@internationalized/date": "^3.12.0",
     "bits-ui": "^2.16.3",
     "chart.js": "^4",

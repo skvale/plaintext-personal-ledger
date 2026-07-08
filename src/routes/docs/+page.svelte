@@ -817,7 +817,7 @@
           </div>
         </div>
         <p>The expense is recorded immediately, and <span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span> tracks what you still owe.</p>
-        <p>When you pay the bill later, a second transaction moves the amount from <span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span> to <span class="inline-flex align-baseline"><AccountBadge account="assets" size="sm" /></span> — closing the loop.</p>
+        <p>When you pay the bill later, a second transaction offsets <span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span> — moving the amount from your payment account (an Asset like checking, or another Liability like a credit card) to settle the bill.</p>
         <p>This way your expense reports are accurate from day one, even before payment clears.</p>
         <p>If you've already paid, check "Already paid" below to skip the payable step.</p>
         <div class="mt-2 text-right">

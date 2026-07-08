@@ -43,7 +43,9 @@
   }
 
   function getAmountColor(account: string, amount: number, defaultColor: string) {
-    if (account === 'income' && amount < 0) return 'text-rose-400';
+    if (amount === 0) return 'text-slate-500';
+    if (account === 'income') return amount < 0 ? 'text-rose-400' : 'text-emerald-400';
+    if (account === 'expenses') return amount < 0 ? 'text-emerald-400' : 'text-rose-400';
     return defaultColor;
   }
 
