@@ -69,7 +69,7 @@ function isReconcilable(acct: string): boolean {
 export async function getAccountsWithUncleared(): Promise<string[]> {
   try {
     const [txns, skipSet] = await Promise.all([
-      runJson<any[]>(["print", "status:!"]),
+      runJson<any[]>(["print", "status:", "status:!"]),
       getReconcileSkipAccounts(),
     ]);
     if (!Array.isArray(txns)) return [];

@@ -59,7 +59,7 @@
   const billBalanceAcct = $derived(billPaid ? (billPayAccount || 'assets:…') : 'liabilities:payable');
   const billTotal = $derived(() => {
     return billPostings.reduce((sum, p) => {
-      const n = parseFloat(p.amount.replace(/[^0-9.]/g, ''));
+      const n = parseFloat(p.amount.replace(/[^0-9.\-]/g, ''));
       return sum + (isNaN(n) ? 0 : n);
     }, 0);
   });
@@ -93,7 +93,7 @@
     if (billSubmitted) validateBill();
   });
   function fmtAmt(val: string) {
-    const n = parseFloat(val.replace(/[^0-9.]/g, ''));
+    const n = parseFloat(val.replace(/[^0-9.\-]/g, ''));
     if (isNaN(n)) return '0.00';
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
