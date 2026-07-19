@@ -8,12 +8,14 @@
     onchange,
     inputClass = '',
     name,
+    weekStartsOn = 0, // 0 = Sunday, 1 = Monday, 6 = Saturday
   }: {
     value?: string;
     placeholder?: string;
     onchange?: () => void;
     inputClass?: string;
     name?: string;
+    weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   } = $props();
 
   function parseDate(s: string): DateValue | undefined {
@@ -51,7 +53,7 @@
 <DatePicker.Root
   value={inner}
   onValueChange={handleChange}
-  weekStartsOn={1}
+  weekStartsOn={weekStartsOn}
   disableDaysOutsideMonth={false}
 >
   <div class="relative">

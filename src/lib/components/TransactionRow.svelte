@@ -2,7 +2,7 @@
   import AccountLabel from '$lib/components/AccountLabel.svelte';
   import Amount from '$lib/components/Amount.svelte';
   import { amountColor, accountSortKey, accountColor, accountDotClass } from '$lib/account-colors.js';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
+  import { parseCommodity, formatAmount, parseCommodityFromSymbol } from '$lib/format.js';
   import { page } from '$app/stores';
 
   let {
@@ -17,7 +17,7 @@
     date: string;
     description: string;
     account?: string;
-    postings?: { account: string; amount: number }[];
+    postings?: { account: string; amount: number; commodity?: string }[];
     amount: number;
     href?: string;
     signed?: boolean;
@@ -40,6 +40,7 @@
   const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
   const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;

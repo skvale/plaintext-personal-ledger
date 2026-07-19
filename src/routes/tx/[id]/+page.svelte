@@ -275,7 +275,7 @@
               <span class="text-slate-100 italic">auto</span>
             {:else if p.hasCost}
               <span class="text-slate-100 whitespace-pre">{p.rawAmt}</span>
-              <span class="text-slate-100/50 ml-2"><Amount precise value={p.absAmount} /></span>
+              <span class="text-slate-100/50 ml-2">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
             {:else}
               <span class="{p.amount >= 0 ? 'text-slate-100' : 'text-slate-100'}">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
             {/if}

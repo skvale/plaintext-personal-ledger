@@ -174,7 +174,7 @@
       <div class="flex items-center gap-2">
         <span class="w-5 shrink-0"></span>
         <span class="min-w-0 flex-1 pl-3 text-xs font-semibold tracking-wide text-slate-100">Account</span>
-        <span class="w-36 shrink-0 pl-3 text-xs font-semibold tracking-wide text-slate-100">Amount</span>
+        <span class="w-48 shrink-0 pl-3 text-xs font-semibold tracking-wide text-slate-100">Amount</span>
         <span class="shrink-0 w-[13px]"></span>
         <span class="w-36 shrink-0 pl-3 text-xs font-semibold tracking-wide text-slate-100">Assertion</span>
         <span class="w-9 shrink-0"></span>

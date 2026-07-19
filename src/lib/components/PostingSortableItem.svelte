@@ -55,12 +55,12 @@
         inputClass="min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 pr-8 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300 dark:border-slate-300 dark:bg-slate-900"
       />
     </div>
-    <input
+<input
       type="text"
       value={amount}
       oninput={(e) => onamountchange((e.target as HTMLInputElement).value)}
       placeholder=""
-      class="w-36 shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300 dark:border-slate-300 dark:bg-slate-900"
+      class="w-48 shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300 dark:border-slate-300 dark:bg-slate-900"
     />
     {#if showAssertion}
       <span class="shrink-0 text-sm text-slate-100">=</span>

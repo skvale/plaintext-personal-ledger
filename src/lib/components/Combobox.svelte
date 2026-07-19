@@ -18,9 +18,11 @@
     grouped?: boolean;
     /** Allow selecting top-level accounts (e.g. "expenses") as values */
     allowTopLevel?: boolean;
+    /** Allow pointer events on the floating content wrapper (default: auto for combobox) */
+    contentPointerEvents?: 'auto' | 'none';
   }
 
-  let { items, value, onchange, oncreate, placeholder = '', name, disabled = false, inputClass = '', grouped = true, allowTopLevel = false }: Props = $props();
+  let { items, value, onchange, oncreate, placeholder = '', name, disabled = false, inputClass = '', grouped = true, allowTopLevel = false, contentPointerEvents = 'auto' }: Props = $props();
 
   // svelte-ignore state_referenced_locally
   let inputValue = $state(value);
@@ -109,7 +111,7 @@
   }}
   items={allItems}
 >
-  <div class="relative w-full">
+  <div class="relative w-full" data-combobox="root">
     <Combobox.Input
       {placeholder}
       {disabled}
@@ -119,6 +121,30 @@
       onclick={() => { if (!open) open = true; }}
       onfocus={() => { userTyped = false; open = true; }}
       oninput={(e: Event) => { userTyped = true; inputValue = (e.target as HTMLInputElement).value; }}
+      onkeydown={(e: KeyboardEvent) => {
+        if (e.key === 'Tab' && open) {
+          const root = (e.currentTarget as HTMLElement).closest('[data-combobox="root"]');
+          const highlighted = root?.querySelector<HTMLElement>('[data-combobox-item][data-highlighted]');
+          if (highlighted) {
+            const val = highlighted.getAttribute('data-value') ?? '';
+            const label = highlighted.getAttribute('data-label') ?? val;
+            if (val === '__create__') {
+              const typed = inputValue.trim();
+              inputValue = typed;
+              userTyped = false;
+              value = typed;
+              oncreate?.(typed);
+              onchange?.(typed);
+            } else if (val) {
+              inputValue = label;
+              userTyped = false;
+              value = val;
+              onchange?.(val);
+            }
+            open = false;
+          }
+        }
+      }}
       onblur={() => {
         if (userTyped && !inputValue.trim() && value) {
           prevValue = '';
@@ -147,12 +173,12 @@
     >▾</span>
 
     {#if open && (displayItems.length > 0 || showCreateOption)}
-      <Combobox.Content
-        class="popover-caret z-50 rounded-xl border border-slate-300 bg-slate-900 shadow-xl"
-        style="min-width: max(var(--bits-combobox-anchor-width), 280px); pointer-events: auto;"
-        sideOffset={12}
-        forceMount={false}
-      >
+<Combobox.Content
+          class="popover-caret z-50 rounded-xl border border-slate-300 bg-slate-900 shadow-xl"
+          style="min-width: max(var(--bits-combobox-anchor-width), 280px); pointer-events: {contentPointerEvents};"
+          sideOffset={12}
+          forceMount={false}
+        >
         <Combobox.Viewport class="max-h-72 overflow-y-auto py-1">
         {#if showCreateOption}
           <Combobox.Item

@@ -186,7 +186,33 @@
   const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
   const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+
+  // Detect if filtered account is an investment/stock account
+  const isInvestmentAccount = $derived(account?.startsWith('assets:investments:') ?? false);
+
+  // Get the commodity symbol for the filtered investment account (from matching postings)
+  const investmentCommodity = $derived.by(() => {
+    if (!isInvestmentAccount || !account) return null;
+    // Look at all transactions to find the commodity used in this account
+    for (const txn of data.transactions) {
+      const match = txn.postings.find(
+        (p) => p.account === account || p.account.startsWith(account + ':')
+      );
+      if (match && match.commodity && match.commodity !== '$') {
+        return match.commodity;
+      }
+    }
+    return null;
+  });
+
+  // Format function that uses investment commodity for investment accounts
   function fmt(n: number) {
+    if (isInvestmentAccount && investmentCommodity) {
+      const stockFmt = { ...commodityFmt, symbol: investmentCommodity, decimals: 0, symbolBefore: false };
+      const full = formatAmount(Math.abs(n), stockFmt);
+      if (showSymbol) return full;
+      return full.replace(investmentCommodity, '');
+    }
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
     return full.replace(displayFmt.symbol, '');
@@ -426,9 +452,24 @@
             {@const matchPostings = rawMatch.length > 0
               ? rawMatch
               : vis.filter(p => p.amount !== 0)}
-            {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
-            {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : (primary?.account ?? '')}
-             <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} />
+            {#if isInvestmentAccount && account}
+              {#if matchPostings.length > 0}
+                {@const byCommodity = Object.groupBy(matchPostings, p => p.commodity || '$')}
+                {@const commodities = Object.entries(byCommodity)}
+                {#each commodities as [commodity, posts], i}
+                  {@const totalAmt = posts.reduce((s, p) => s + p.amount, 0)}
+                  {@const amtAccount = posts[0].account}
+                  <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} commodity={commodity !== '$' ? commodity : undefined} />
+                  {#if i < commodities.length - 1}<span class="text-slate-100"> + </span>{/if}
+                {/each}
+              {:else}
+                <Amount value={0} class={amountColor(0, '', txn.postings)} />
+              {/if}
+            {:else}
+              {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
+              {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : (primary?.account ?? '')}
+              <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} />
+            {/if}
           {/if}
         </div>
       </a>

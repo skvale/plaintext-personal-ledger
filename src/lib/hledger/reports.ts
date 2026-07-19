@@ -60,19 +60,32 @@ export async function getExpenseCategories(
     "expenses",
     "--tree",
     "--depth",
-    "2",
+    "3",
     "-p",
     period,
   ]);
   if (!data) return [];
   const rows: any[] = Array.isArray(data) ? (data[0] ?? []) : [];
-  return rows
+  const categories = rows
     .map((row) => {
       const name: string = row[0] ?? "";
       const amount = pickAmount(row[3]);
       return { name, shortName: name.split(":").pop() ?? name, amount };
     })
-    .filter((c) => c.amount !== 0 && c.name !== "expenses")
+    .filter((c) => c.amount !== 0 && c.name !== "expenses");
+
+  // Filter out parent accounts that have children in the results
+  const names = new Set(categories.map((c) => c.name));
+  const hasChildren = new Set<string>();
+  for (const c of categories) {
+    const parts = c.name.split(":");
+    for (let i = 1; i < parts.length; i++) {
+      const parent = parts.slice(0, i).join(":");
+      if (names.has(parent)) hasChildren.add(parent);
+    }
+  }
+  return categories
+    .filter((c) => !hasChildren.has(c.name))
     .sort((a, b) => b.amount - a.amount);
 }
 

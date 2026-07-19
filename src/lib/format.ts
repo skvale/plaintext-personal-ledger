@@ -96,3 +96,14 @@ export function splitAmount(
   const num = abs.replace(sym, "");
   return { sign, symbol: sym, number: num };
 }
+
+/** Parse a commodity symbol (e.g., "AAPL", "GOOGL") into a CommodityFormat with no decimals */
+export function parseCommodityFromSymbol(symbol: string): CommodityFormat {
+  return {
+    symbol,
+    symbolBefore: false,
+    thousandsSep: ",",
+    decimalSep: ".",
+    decimals: 0,
+  };
+}

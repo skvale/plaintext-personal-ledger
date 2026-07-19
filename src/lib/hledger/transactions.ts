@@ -34,7 +34,7 @@ export async function getRecentTransactions(
   count = 10,
   period?: string,
 ): Promise<Transaction[]> {
-  const args: string[] = ["print"];
+  const args: string[] = ["print", "-B"];
   if (period) args.push("-p", period);
   const raw = await runJson<any[]>(args);
   if (!raw) return [];
@@ -65,6 +65,7 @@ export async function getRecentTransactions(
     const amount = posAmt > 0
       ? posAmt
       : visible.filter((p: any) => p.amount !== 0).reduce((s: number, p: any) => s + p.amount, 0);
+
     const txid = getTxid(tx.ttags ?? []);
     return {
       index: i,
