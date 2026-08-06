@@ -724,13 +724,26 @@ export async function updateTransaction(
   } catch (e: any) {
     await writeFile(targetFile, targetContent, "utf-8");
     const msg: string = e.stderr ?? e.stdout ?? "Validation failed";
+    const body = msg
+      .split("\n")
+      .filter((l: string) => l.trim() && !/^\s*\d*\s*\|/.test(l) && !/^hledger: Error:/.test(l))
+      .join(" ")
+      .trim();
+
+    const baMatch = body.match(
+      /Balance assertion failed in (.+?)(?:\s+In commodity|\s+At this|\s+in this)/i
+    );
+    if (baMatch) {
+      const account = baMatch[1].trim();
+      return {
+        success: false,
+        error: `This transaction breaks a balance assertion on \`${account}\`. The new posting changes the running balance of that account, so an existing assertion no longer holds. Fix it on the Check page, or remove the stale assertion.`,
+      };
+    }
+
     return {
       success: false,
-      error: msg
-        .split("\n")
-        .filter((l: string) => l.trim())
-        .slice(0, 3)
-        .join(" "),
+      error: body || msg.split("\n").filter((l: string) => l.trim()).slice(0, 3).join(" "),
     };
   }
 }

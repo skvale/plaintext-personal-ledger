@@ -61,3 +61,25 @@ Development (with hot reload):
 pnpm install
 pnpm dev
 ```
+
+## Install as a command
+
+Run the built app from **any** directory against your own data folder:
+
+```bash
+./scripts/install.sh      # one-time setup: builds the app, installs `ledger-web` on your PATH
+ledger-web ~/my-data      # then run from anywhere; Ctrl-C to stop
+```
+
+Your journal lives in the data dir you point at (`main.journal`, year files, `settings.json`, `docs/`). Point it at a fresh folder and the app sets everything up on first use. Re-run `./scripts/install.sh` after pulling updates to rebuild.
+
+Notes:
+
+- Default port is 3000; override with `PORT`:
+  ```bash
+  PORT=8080 ledger-web ~/my-data
+  ```
+- Equivalent to `make install`. No install needed? Run directly:
+  ```bash
+  DATA_DIR=~/my-data ./run
+  ```

@@ -279,6 +279,9 @@
             {:else}
               <span class="{p.amount >= 0 ? 'text-slate-100' : 'text-slate-100'}">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
             {/if}
+            {#if p.assertion && !p.isBalanceAssignment}
+              <span class="ml-1 text-slate-100/60">= {#if p.assertionNum != null}<Amount precise value={p.assertionNum} />{:else}{p.assertion}{/if}</span>
+            {/if}
           </span>
         </div>
       {/each}

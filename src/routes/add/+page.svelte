@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
-  import { enhance } from '$app/forms';
+  import { applyAction, enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
@@ -130,6 +130,8 @@
         submitting = false;
         if (result.type === 'redirect') {
           goto((result as { location: string }).location);
+        } else {
+          applyAction(result);
         }
       };
     }} class="flex flex-col gap-5">

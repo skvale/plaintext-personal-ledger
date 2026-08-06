@@ -88,6 +88,9 @@ web: ## Open web UI in browser (http://localhost:5000)
 dev: ## Start the new Svelte UI (http://localhost:5173)
 	pnpm dev
 
+install: ## Build and install `ledger-web` command on PATH
+	./scripts/install.sh
+
 # === Add transactions ===
 
 add: ## Add a transaction interactively
