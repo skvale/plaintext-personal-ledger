@@ -10,6 +10,8 @@
   import Amount from '$lib/components/Amount.svelte';
   import { page } from '$app/stores';
   import { parseCommodity, formatAmount } from '$lib/format.js';
+  import { accountColor } from '$lib/account-colors.js';
+  import AccountBadge from '$lib/components/AccountBadge.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -232,7 +234,15 @@
           {@const barPct = (Math.abs(cat.amount) / maxExpense) * 100}
           {@const isNet = cat.amount < 0}
           <div class="flex items-center gap-2.5">
-            <span class="w-[72px] shrink-0 truncate text-sm text-slate-100">{cat.shortName}</span>
+            <div class="group/cat relative shrink-0">
+              <span class="block w-[72px] truncate text-sm text-slate-100">{cat.shortName}</span>
+              {#if cat.name !== cat.shortName}
+                <div class="tooltip-caret pointer-events-none absolute bottom-full left-0 mb-1.5 flex items-center whitespace-nowrap rounded border border-slate-300 bg-slate-900 px-2.5 py-1.5 shadow-lg opacity-0 transition-opacity group-hover/cat:opacity-100 z-20">
+                  <AccountBadge account={cat.name} size="xs" />
+                  <span class="font-mono text-xs {accountColor(cat.name)}">{cat.name.replace(/^[^:]+/, '')}</span>
+                </div>
+              {/if}
+            </div>
             <div class="relative flex-1 h-5 rounded-md overflow-hidden bg-slate-800/50">
               <div
                 class="absolute inset-y-0 left-0 rounded-md transition-all"

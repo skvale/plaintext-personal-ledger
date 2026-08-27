@@ -329,9 +329,9 @@
     <p class="text-slate-100">No transactions found.</p>
   </div>
 {:else}
-  <div class="register-table rounded-xl border border-slate-400 [&>:first-child]:rounded-t-[11px] [&>:last-child]:rounded-b-[11px]">
+  <div class="register-table">
     <!-- Header -->
-    <div class="grid grid-cols-[6rem_1fr_1fr_7rem] border-b border-slate-400 bg-slate-900 text-left text-sm">
+    <div class="grid grid-cols-[6rem_1fr_1fr_7rem] border-b border-slate-400/60 text-left text-sm">
       <div class="px-3 py-2 font-medium text-slate-100">Date</div>
       <div class="px-3 py-2 font-medium text-slate-100">Description</div>
       <div class="px-3 py-2 font-medium text-slate-100">Account</div>
@@ -354,8 +354,8 @@
       {@const txHref = (txn.txid || txn.tindex) ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent($page.url.pathname + $page.url.search)}` : ''}
       <a
         href={txHref || undefined}
-        class="group grid grid-cols-[6rem_1fr_1fr_7rem] items-center border-b border-slate-400/60 last:border-0 transition-colors cursor-pointer text-sm no-underline
-          bg-slate-900 hover:bg-slate-800/50"
+        class="group grid grid-cols-[6rem_1fr_1fr_7rem] items-center border-b border-slate-400/60 last:border-0           transition-colors cursor-pointer text-sm no-underline
+          hover:bg-slate-800/50"
       >
         <div class="px-3 py-2 text-[11.5px] text-slate-100 whitespace-nowrap">{fmtDateShort(txn.date)}</div>
         <div class="px-3 py-2 min-w-0">
@@ -494,9 +494,3 @@
   </div>
 {/if}
 
-<style>
-  .register-table :global(thead tr:first-child th:first-child) { border-top-left-radius: 11px; }
-  .register-table :global(thead tr:first-child th:last-child) { border-top-right-radius: 11px; }
-  .register-table :global(tbody tr:last-child td:first-child) { border-bottom-left-radius: 11px; }
-  .register-table :global(tbody tr:last-child td:last-child) { border-bottom-right-radius: 11px; }
-</style>
