@@ -6,6 +6,7 @@ import {
   getAccountDescriptions,
   addAccountDeclaration,
   deleteAccountDeclaration,
+  normalizeAccountName,
   MAIN_JOURNAL
 } from '$lib/hledger.server.js';
 
@@ -31,9 +32,9 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
   add: async ({ request }) => {
     const data = await request.formData();
-    const name = (data.get('name') as string)?.trim();
-    if (!name) return fail(400, { error: 'Account name required' });
-    if (!/^[a-z]/.test(name)) return fail(400, { error: 'Account names should start with lowercase' });
+    const raw = (data.get('name') as string)?.trim();
+    if (!raw) return fail(400, { error: 'Account name required' });
+    const name = normalizeAccountName(raw);
     const result = await addAccountDeclaration(name);
     if (!result.success) return fail(422, { error: result.error });
     return { added: true };

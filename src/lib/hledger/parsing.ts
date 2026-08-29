@@ -139,6 +139,7 @@ export function fmtPosting(
   amount?: string,
   cleared?: boolean,
 ): string {
+  account = normalizeAccountName(account);
   const indent = "    ";
   const status = cleared ? "* " : "";
   if (!amount) return `${indent}${status}${account}`;
@@ -148,6 +149,11 @@ export function fmtPosting(
   const padding = Math.max(2, startCol - accountPart.length);
   const amountStr = amount.padStart(AMOUNT_WIDTH);
   return accountPart + " ".repeat(padding) + amountStr;
+}
+
+/** Normalize an account name to the app's lowercase convention. */
+export function normalizeAccountName(name: string): string {
+  return name.trim().toLowerCase();
 }
 
 /**

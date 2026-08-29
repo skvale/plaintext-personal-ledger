@@ -116,19 +116,42 @@ export interface MultiMonthBalanceSheet {
 export async function getBalanceSheetMultiMonth(
   monthCount: number,
 ): Promise<MultiMonthBalanceSheet> {
-  const range = lastNMonths(monthCount);
-  const json = await runJson<any>([
-    "balancesheet",
-    "-V",
-    "--tree",
-    "--auto",
-    "--monthly",
-    "--depth",
-    "6",
-    "-p",
-    range,
+  const now = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const rangeStart = new Date(
+    now.getFullYear(),
+    now.getMonth() - Math.max(0, monthCount - 1),
+    1,
+  );
+
+  // Completed months (monthly interval over past months only)
+  const [pastJson, currentJson] = await Promise.all([
+    runJson<any>([
+      "balancesheet",
+      "-V",
+      "--tree",
+      "--auto",
+      "--monthly",
+      "--depth",
+      "6",
+      "-p",
+      `${fmt(rangeStart)}..${fmt(currentStart)}`,
+    ]),
+    // Current month as of today — excludes future-dated transactions
+    runJson<any>([
+      "balancesheet",
+      "-V",
+      "--tree",
+      "--auto",
+      "--depth",
+      "6",
+      "-e",
+      "tomorrow",
+    ]),
   ]);
-  if (!json)
+
+  if (!pastJson && !currentJson)
     return {
       months: [],
       accounts: [],
@@ -137,52 +160,117 @@ export async function getBalanceSheetMultiMonth(
       netWorths: [],
     };
 
-  const dates: any[] = json.cbrDates ?? [];
-  const months = dates.map((d) => periodStart(d));
-  const subs: CbrSubreport[] = json.cbrSubreports ?? [];
-  const assetSub = findSubreport(subs, /asset/i)?.[1];
-  const liabSub = findSubreport(subs, /liabilit/i)?.[1];
+  const currentMonth = currentStart.toISOString().slice(0, 7);
+  const pastDates: any[] = (pastJson?.cbrDates ?? []).filter((d: any) => {
+    const s = Array.isArray(d) ? d[0]?.contents : d;
+    return typeof s === "string" && /^\d{4}-\d{2}/.test(s);
+  });
+  const pastCols = pastDates.length;
+  const months = [...pastDates.map((d) => periodStart(d)), currentMonth];
 
-  function extractRows(sub: any, type: "asset" | "liability") {
+  const assetSubPast = findSubreport(pastJson?.cbrSubreports ?? [], /asset/i)?.[1];
+  const liabSubPast = findSubreport(pastJson?.cbrSubreports ?? [], /liabilit/i)?.[1];
+  const assetSubNow = findSubreport(currentJson?.cbrSubreports ?? [], /asset/i)?.[1];
+  const liabSubNow = findSubreport(currentJson?.cbrSubreports ?? [], /liabilit/i)?.[1];
+
+  const prefixTop = (name: string, top: string) =>
+    name.startsWith(top + ":") || name === top ? name : `${top}:${name}`;
+
+  const accounts = new Map<
+    string,
+    {
+      name: string;
+      depth: number;
+      type: "asset" | "liability";
+      past: number[];
+      now: number;
+    }
+  >();
+
+  const addRows = (
+    sub: any,
+    type: "asset" | "liability",
+    cell: (i: number, row: any) => number,
+  ) => {
     const top = type === "asset" ? "assets" : "liabilities";
-    const rows: MultiMonthBalanceSheet["accounts"] = [];
     for (const row of sub?.prRows ?? []) {
       const name: string = row.prrName ?? "";
       if (!name) continue;
-      const fullName =
-        name.startsWith(top + ":") || name === top ? name : `${top}:${name}`;
+      const fullName = prefixTop(name, top);
       const depth = fullName.split(":").length - 1;
       if (depth === 0) continue;
-      const amounts = dates.map((_: any, i: number) =>
-        pickAmount(row.prrAmounts?.[i]),
-      );
-      rows.push({ name: fullName, depth, type, amounts });
+      const past = Array.from({ length: pastCols }, (_, i) => cell(i, row));
+      accounts.set(fullName, { name: fullName, depth, type, past, now: 0 });
     }
-    return rows;
-  }
+  };
 
-  const accounts = [
-    ...extractRows(assetSub, "asset"),
-    ...extractRows(liabSub, "liability"),
+  addRows(assetSubPast, "asset", (i, row) =>
+    pickAmount(row.prrAmounts?.[i]),
+  );
+  addRows(liabSubPast, "liability", (i, row) =>
+    pickAmount(row.prrAmounts?.[i]),
+  );
+
+  const setNow = (
+    sub: any,
+    type: "asset" | "liability",
+  ) => {
+    const top = type === "asset" ? "assets" : "liabilities";
+    for (const row of sub?.prRows ?? []) {
+      const name: string = row.prrName ?? "";
+      if (!name) continue;
+      const fullName = prefixTop(name, top);
+      const depth = fullName.split(":").length - 1;
+      if (depth === 0) continue;
+      const value = pickAmount(row.prrAmounts?.[0]);
+      const existing = accounts.get(fullName);
+      if (existing) {
+        existing.now = value;
+      } else {
+        accounts.set(fullName, {
+          name: fullName,
+          depth,
+          type,
+          past: Array(pastCols).fill(0),
+          now: value,
+        });
+      }
+    }
+  };
+
+  setNow(assetSubNow, "asset");
+  setNow(liabSubNow, "liability");
+
+  const flat = [...accounts.values()].map(({ name, depth, type, past, now }) => ({
+    name,
+    depth,
+    type,
+    amounts: [...past, now],
+  }));
+
+  const pastAssetTotals = pastDates.map((_: any, i: number) =>
+    pickAmount(assetSubPast?.prTotals?.prrAmounts?.[i]),
+  );
+  const pastLiabTotals = pastDates.map((_: any, i: number) =>
+    pickAmount(liabSubPast?.prTotals?.prrAmounts?.[i]),
+  );
+  const assetTotals = [
+    ...pastAssetTotals,
+    pickAmount(assetSubNow?.prTotals?.prrAmounts?.[0]),
   ];
+  const liabTotals = [
+    ...pastLiabTotals,
+    pickAmount(liabSubNow?.prTotals?.prrAmounts?.[0]),
+  ];
+  const netWorths = assetTotals.map((a, i) => a - (liabTotals[i] ?? 0));
 
-  const assetTotals = dates.map((_: any, i: number) =>
-    pickAmount(assetSub?.prTotals?.prrAmounts?.[i]),
-  );
-  const liabTotals = dates.map((_: any, i: number) =>
-    pickAmount(liabSub?.prTotals?.prrAmounts?.[i]),
-  );
-  const netWorths = dates.map(
-    (_: any, i: number) => assetTotals[i] - liabTotals[i],
-  );
-
-  return { months, accounts, assetTotals, liabTotals, netWorths };
+  return { months, accounts: flat, assetTotals, liabTotals, netWorths };
 }
 
 export async function getBalanceSheet(): Promise<BalanceSheetData> {
   const range = lastNMonths(12);
   const [snapshot, history] = await Promise.all([
-    runJson<any>(["balancesheet", "-V", "--depth", "6"]),
+    runJson<any>(["balancesheet", "-V", "--depth", "6", "-e", "tomorrow"]),
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range]),
   ]);
 

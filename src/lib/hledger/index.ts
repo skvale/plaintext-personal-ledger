@@ -41,6 +41,7 @@ export {
   fmtPosting,
   fmtAmount,
   normaliseAmount,
+  normalizeAccountName,
 } from "./parsing.js";
 
 export type { CbrSubreport } from "./parsing.js";

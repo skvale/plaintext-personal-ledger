@@ -9,6 +9,7 @@ import {
   extractTag,
   fmtPosting,
   normaliseAmount,
+  normalizeAccountName,
   fmtAmount,
 } from "./parsing.js";
 import type { Transaction } from "./types.js";
@@ -224,6 +225,7 @@ export async function getAccountDescriptions(): Promise<Record<string, string>> 
 export async function addAccountDeclaration(
   name: string,
 ): Promise<{ success: boolean; error?: string }> {
+  name = normalizeAccountName(name);
   const { readFile, writeFile } = await import("node:fs/promises");
   const JOURNAL = MAIN_JOURNAL;
 
