@@ -657,6 +657,106 @@ export async function rulesFileExists(filename: string): Promise<boolean> {
   }
 }
 
+// ─── Dedup: Parse & Filter ────────────────────────────────────────────────────
+
+interface ParsedBlock {
+  date: string;
+  payee: string;
+  description: string;
+  amount: number;
+}
+
+/**
+ * Parse a single hledger dry-run text block into structured fields for dedup.
+ * Block format: "2026-03-15 * Payee | Description\n    account    $5.50\n    ..."
+ */
+function parseImportBlock(block: string): ParsedBlock | null {
+  const lines = block.split("\n");
+  const header = lines[0];
+  const dateMatch = header.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!dateMatch) return null;
+
+  const date = dateMatch[1];
+
+  // Strip date + status marker (* or !) to get payee|description part
+  const afterStatus = header.replace(/^\d{4}-\d{2}-\d{2}\s*[*!]\s*/, "");
+  const pipeIdx = afterStatus.indexOf(" | ");
+  const payee = pipeIdx >= 0 ? afterStatus.slice(0, pipeIdx).trim() : "";
+  const description = pipeIdx >= 0 ? afterStatus.slice(pipeIdx + 3).trim() : afterStatus.trim();
+
+  // Amount: last posting line with a numeric value
+  let amount = 0;
+  for (let i = lines.length - 1; i > 0; i--) {
+    const m = lines[i].match(
+      /^\s+\S+\s+(-?[\d,]+\.?\d*)/,
+    );
+    if (m) {
+      amount = Math.abs(parseFloat(m[1].replace(/,/g, "")));
+      break;
+    }
+  }
+
+  return { date, payee, description, amount };
+}
+
+/**
+ * Filter out candidate blocks that duplicate existing journal transactions
+ * on the .latest date. This covers the gap where hledger's <= comparison
+ * misses same-date re-imports.
+ * Matching: same date + payee + amount (within $0.01).
+ */
+async function filterDuplicateBlocks(
+  blocks: string[],
+  latestDate: string,
+): Promise<{ kept: string[]; skipped: number }> {
+  if (!latestDate) return { kept: blocks, skipped: 0 };
+
+  // Only query journal transactions on the .latest date
+  const journalTxns = (await runJson<any[]>([
+    "print",
+    "-B",
+    "-b",
+    latestDate,
+    "-e",
+    latestDate,
+  ])) ?? [];
+
+  // Build lookup from journal: key = "payee|amount"
+  const existing = new Set<string>();
+  for (const tx of journalTxns) {
+    const txPayee = (tx.tpayee ?? "").trim();
+    const postings = tx.tpostings ?? [];
+    let total = 0;
+    for (const p of postings) {
+      const acct = p.paccount ?? "";
+      if (acct.startsWith("equity")) continue;
+      total += pickAmount(p.pamount);
+    }
+    total = Math.abs(total);
+    existing.add(`${txPayee.toLowerCase()}\t${total.toFixed(2)}`);
+  }
+
+  const kept: string[] = [];
+  let skipped = 0;
+
+  for (const block of blocks) {
+    const parsed = parseImportBlock(block);
+    // Skip blocks not on the .latest date — hledger handles those via .latest
+    if (!parsed || parsed.date !== latestDate) {
+      kept.push(block);
+      continue;
+    }
+    const key = `${parsed.payee.toLowerCase()}\t${parsed.amount.toFixed(2)}`;
+    if (existing.has(key)) {
+      skipped++;
+    } else {
+      kept.push(block);
+    }
+  }
+
+  return { kept, skipped };
+}
+
 // ─── Preview Normalization ─────────────────────────────────────────────────────
 
 function normalizePreview(raw: string): string {
@@ -774,7 +874,7 @@ export async function importCsvPreview(
 
 export async function importCsvConfirm(
   token: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; imported?: number; skipped?: number; error?: string }> {
   const pending = pendingImports.get(token);
   if (!pending)
     return { success: false, error: "Session expired — please re-preview." };
@@ -787,6 +887,19 @@ export async function importCsvConfirm(
   const rulesFilename = basename(pending.rulesPath);
   await applyLatestFromRules(rulesFilename, pending.csvPath);
 
+  // Read the .latest date for application-level dedup
+  let latestDate = "";
+  try {
+    latestDate = await readFile(
+      join(JOURNAL_DIR, `.latest.${rulesFilename}`),
+      "utf-8",
+    ).then((s) => s.trim());
+  } catch {
+    // No .latest file yet — first import, no dedup needed
+  }
+
+  let skipped = 0;
+
   try {
     const { stdout, stderr } = await execAsync(
       `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${pending.rulesPath}" "${pending.csvPath}"`,
@@ -794,7 +907,7 @@ export async function importCsvConfirm(
     const raw = [stdout, stderr].filter(Boolean).join("\n").trim();
     const output = normalizePreview(raw);
 
-    const blocks = output
+    let blocks = output
       .split(/\n\n+/)
       .map((b) => b.trim())
       .filter((b) => /^\d{4}-\d{2}-\d{2}/.test(b));
@@ -802,6 +915,16 @@ export async function importCsvConfirm(
     if (blocks.length === 0) {
       invalidateCache();
       return { success: true };
+    }
+
+    // Application-level dedup: skip blocks matching journal txns on the .latest date
+    const dedup = await filterDuplicateBlocks(blocks, latestDate);
+    blocks = dedup.kept;
+    skipped = dedup.skipped;
+
+    if (blocks.length === 0) {
+      invalidateCache();
+      return { success: true, imported: 0, skipped };
     }
 
     const { nanoid } = await import("nanoid");
@@ -851,7 +974,7 @@ export async function importCsvConfirm(
     }
 
     invalidateCache();
-    return { success: true };
+    return { success: true, imported: blocks.length, skipped };
   } catch (e: any) {
     const msg = [e.stderr ?? "", e.stdout ?? ""]
       .filter(Boolean)

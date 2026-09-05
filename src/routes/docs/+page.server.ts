@@ -231,7 +231,11 @@ export const actions: Actions = {
 
     const result = await importCsvConfirm(token);
     if (!result.success) return fail(400, { importError: result.error ?? 'Import failed.' });
-    return { importSuccess: true };
+    return {
+      importSuccess: true,
+      imported: result.imported,
+      skipped: result.skipped,
+    };
   },
 
   addMappings: async ({ request }) => {

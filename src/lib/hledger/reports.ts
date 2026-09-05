@@ -15,7 +15,7 @@ import type { AccountBalance, ExpenseCategory, MonthlyData } from "./types.js";
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export async function getNetWorth(period?: string): Promise<number> {
-  const args = ["balancesheet", "-V", "--depth", "6"];
+  const args = ["balancesheet", "-V", "--depth", "6", "-e", "tomorrow"];
   if (period && period !== "thismonth") args.push("-p", period);
   const json = await runJson<any>(args);
   if (!json) return 0;
@@ -602,7 +602,7 @@ export async function getAccountBalances(): Promise<AccountBalance[]> {
   const { getAccountNames } = await import("./transactions.js");
   const allNames = await getAccountNames();
 
-  const data = await runJson<any>(["bal", "-V", "--flat", "--no-total"]);
+  const data = await runJson<any>(["bal", "-V", "--flat", "--no-total", "-e", "tomorrow"]);
   const rows: any[] = Array.isArray(data) ? (data[0] ?? []) : [];
   const balanceMap = new Map<string, number>(
     rows.map((row) => [row[0] as string, pickAmount(row[3])]),
@@ -662,8 +662,8 @@ export async function getPortfolioData(months: number = 12): Promise<{
 }> {
   const range = lastNMonths(months);
   const [mktSnapshot, costSnapshot, mktHistJson, costHistJson] = await Promise.all([
-    runJson<any>(["bal", "-V", "assets:investments", "--flat"]),
-    runJson<any>(["bal", "-B", "assets:investments", "--flat"]),
+    runJson<any>(["bal", "-V", "assets:investments", "--flat", "-e", "tomorrow"]),
+    runJson<any>(["bal", "-B", "assets:investments", "--flat", "-e", "tomorrow"]),
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
   ]);
@@ -711,7 +711,7 @@ export interface HoldingEntry {
 }
 
 export async function getHoldings(): Promise<HoldingEntry[]> {
-  const json = await runJson<any>(["bal", "-N", "assets:investments", "--flat"]);
+  const json = await runJson<any>(["bal", "-N", "assets:investments", "--flat", "-e", "tomorrow"]);
   if (!json) return [];
 
   const rows: any[] = Array.isArray(json[0]) ? json[0] : [];

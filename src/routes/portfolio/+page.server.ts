@@ -22,7 +22,6 @@ export const load: PageServerLoad = async ({ url }) => {
   const tableTotal = tableGains.reduce((s: number, g: any) => s + g.gain, 0);
 
   const recent = [...recentTxns].reverse().slice(0, 15);
-  const totalGain = portfolio.accounts.reduce((s: number, a: any) => s + a.balance, 0)
-                  - portfolio.costAccounts.reduce((s: number, a: any) => s + a.balance, 0);
+  const totalGain = gains.total;
   return { ...portfolio, recentTxns: recent, gains, monthCount, totalGain, tableGains, tableTotal };
 };

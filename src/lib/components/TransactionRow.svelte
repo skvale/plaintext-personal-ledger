@@ -54,7 +54,14 @@
 >
   <div class="min-w-0 flex-1 overflow-hidden">
     <p class="text-[10px] text-slate-500 mb-0.5">{fmtDate(date)}</p>
-    <p class="truncate text-sm font-medium text-slate-100">{description}</p>
+    {#if description.includes('|')}
+      {@const pipeIdx = description.indexOf('|')}
+      {@const vendor = description.slice(0, pipeIdx).trim()}
+      {@const note = description.slice(pipeIdx + 1).trim()}
+      <p class="truncate text-sm font-medium text-slate-100">{vendor}<span class="ml-1.5 text-secondary">{note}</span></p>
+    {:else}
+      <p class="truncate text-sm font-medium text-slate-100">{description}</p>
+    {/if}
     {#if sorted.length >= 2}
       <div class="group/acct relative flex flex-col gap-0.5 min-w-0 overflow-hidden">
         <div class="min-w-0 truncate"><AccountLabel account={sorted[0].account} size="xs" /></div>

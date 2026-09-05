@@ -380,7 +380,7 @@
                     </span>
                   {/if}
                 </p>
-                <p class="truncate text-xs leading-tight text-slate-100">{note}</p>
+                <p class="truncate text-xs leading-tight text-secondary">{note}</p>
               {:else}
                 <p class="flex items-center gap-1.5">
                   <span class="truncate font-medium text-slate-100">{vendor}</span>

@@ -108,6 +108,8 @@
   let previewCollapsed = $state(false);
   let importError = $state('');
   let importSuccess = $state(false);
+  let importedCount = $state(0);
+  let skippedCount = $state(0);
   let isLoading = $state(false);
   let unmappedDescs = $state<string[]>([]);
   let mappingEdits = $state<Record<string, string>>({});
@@ -187,6 +189,8 @@
             previewError = '';
             importError = '';
             importSuccess = false;
+            importedCount = 0;
+            skippedCount = 0;
             mode = 'import';
             break;
           }
@@ -247,6 +251,8 @@
     previewError = '';
     importError = '';
     importSuccess = false;
+    importedCount = 0;
+    skippedCount = 0;
     mode = 'import';
     // Push ?import= so the back button returns to the file list
     const url = new URL(window.location.href);
@@ -324,7 +330,16 @@
     <div class="rounded-xl border border-slate-400 bg-slate-900 p-10 text-center">
       <div class="mb-3 text-2xl text-emerald-400">✓</div>
       <p class="mb-1 text-sm font-medium text-slate-100">Import complete</p>
-      <p class="mb-6 text-xs text-slate-100">Transactions have been added to your journal.</p>
+      <p class="mb-6 text-xs text-slate-100">
+        {#if importedCount > 0}
+          Imported {importedCount} transaction{importedCount === 1 ? '' : 's'}
+        {:else}
+          Transactions have been added to your journal.
+        {/if}
+        {#if skippedCount > 0}
+          <span class="text-slate-400">({skippedCount} duplicate{skippedCount === 1 ? '' : 's'} skipped)</span>
+        {/if}
+      </p>
       <button
         onclick={cancelImport}
         class="rounded-md bg-blue-300/10 px-4 py-2 text-sm font-medium text-blue-500 transition-colors hover:bg-blue-300/20"
@@ -463,6 +478,8 @@
               if (cData?.importError) {
                 importError = cData.importError;
               } else {
+                importedCount = cData.imported ?? 0;
+                skippedCount = cData.skipped ?? 0;
                 importSuccess = true;
                 invalidateAll();
               }
@@ -696,6 +713,8 @@
               if (cData?.importError) {
                 importError = cData.importError;
               } else {
+                importedCount = cData.imported ?? 0;
+                skippedCount = cData.skipped ?? 0;
                 importSuccess = true;
                 previewToken = '';
                 invalidateAll();
