@@ -554,6 +554,140 @@ export function serializeRulesFile({ header, items }: ParsedRulesFile): string {
   );
 }
 
+// ─── Header Directive Helpers ──────────────────────────────────────────────────
+//
+// hledger imports split credit/debit CSVs using the `amount-in`/`amount-out`
+// fields and assigns account1 = amount-in - amount-out. A negative value in the
+// amount-out (debit) column therefore gets negated into a positive posting —
+// refunds/credits entered as negative debits silently come out as positive
+// expenses. We flatten those negatives before hledger sees the data so signs
+// survive the import.
+//
+// The directives are scanned from the whole file (any top-level line), not just
+// the lines before the first `if`, so hand-edited rules files still work.
+
+/** Extract `skip N` and `fields a, b, ...` from any top-level rules file lines. */
+function parseRulesHeaderDirectives(
+  raw: string,
+): { skip: number; fields: string[] } {
+  let skip = 0;
+  let fields: string[] = [];
+  for (const rawLine of raw.split("\n")) {
+    const t = rawLine.trim();
+    if (!t || /^\s/.test(rawLine)) continue;
+    if (t.startsWith("skip ")) {
+      skip = parseInt(t.slice(5).replace(/;.*$/, ""), 10) || 0;
+    } else if (t.startsWith("fields ")) {
+      fields = t
+        .slice(7)
+        .split(",")
+        .map((f) => f.trim())
+        .filter(Boolean);
+    }
+  }
+  return { skip, fields };
+}
+
+/**
+ * Scan a CSV line and return each cell's raw text plus its [start,end) span
+ * in the original string (quotes and whitespace preserved).
+ */
+function csvCellSpans(line: string): { cells: string[]; spans: [number, number][] } {
+  const cells: string[] = [];
+  const spans: [number, number][] = [];
+  let current = "";
+  let start = 0;
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+        current += ch;
+      } else if (ch === ",") {
+        cells.push(current);
+        spans.push([start, i]);
+        current = "";
+        start = i + 1;
+      } else {
+        current += ch;
+      }
+    }
+  }
+  cells.push(current);
+  spans.push([start, line.length]);
+  return { cells, spans };
+}
+
+/**
+ * Flip the sign of negative values in the amount-out column of a CSV so
+ * hledger's `-(amount-out)` term produces a negative (correct) posting.
+ * Returns the transformed content, or null when nothing needed fixing.
+ * Only the affected cell is rewritten — all other lines/cells are preserved
+ * verbatim so quoted commas and column alignment survive.
+ */
+function normalizeAmountOutNegatives(
+  content: string,
+  skip: number,
+  fields: string[],
+): string | null {
+  const outIdx = fields.indexOf("amount-out");
+  if (outIdx < 0) return null;
+
+  const lines = content.split(/\r?\n/);
+  let changed = false;
+  const out = lines.map((line, i) => {
+    if (i < skip || !line.trim()) return line;
+    const { spans } = csvCellSpans(line);
+    if (outIdx >= spans.length) return line;
+    const [s, e] = spans[outIdx];
+    const cell = line.slice(s, e);
+    const trimmed = cell.trim();
+    const inner = trimmed.startsWith('"') && trimmed.endsWith('"') ? trimmed.slice(1, -1) : trimmed;
+    const m = inner.trim().match(/^-\s*(\$?)([\d.,]+)$/);
+    if (!m) return line;
+
+    const numAt = cell.indexOf(m[0]);
+    const fixedCell = cell.slice(0, numAt) + m[1] + m[2] + cell.slice(numAt + m[0].length);
+    changed = true;
+    return line.slice(0, s) + fixedCell + line.slice(e);
+  });
+
+  return changed ? out.join("\n") : null;
+}
+
+/** Apply the amount-out sign fix to CSV content based on its rules file. */
+async function normalizeCsvForHledger(
+  csvContent: string,
+  rulesPath: string,
+): Promise<string> {
+  try {
+    const rulesRaw = await readFile(rulesPath, "utf-8");
+    const { skip, fields } = parseRulesHeaderDirectives(rulesRaw);
+    // Only flip signs when the computed amount lands on an expense/income-style
+    // account (the convention this app generates). When account1 is an asset or
+    // liability (the other hledger convention), -(amount-out) is already correct
+    // and flipping would corrupt it.
+    const account1 = rulesRaw.match(/^account1\s+(\S+)/m)?.[1];
+    if (account1 && /^(assets|liabilities|equity)/.test(account1)) {
+      return csvContent;
+    }
+    const fixed = normalizeAmountOutNegatives(csvContent, skip, fields);
+    return fixed ?? csvContent;
+  } catch {
+    return csvContent;
+  }
+}
+
 // ─── Rules Writing ─────────────────────────────────────────────────────────────
 
 export async function appendRule(
@@ -821,7 +955,13 @@ async function applyLatestFromRules(
 
 const pendingImports = new Map<
   string,
-  { csvPath: string; rulesPath: string; ts: number; isTemp: boolean }
+  {
+    csvPath: string;
+    rulesPath: string;
+    ts: number;
+    isTemp: boolean;
+    normalizedPath?: string;
+  }
 >();
 
 export async function importCsvPreview(
@@ -839,7 +979,8 @@ export async function importCsvPreview(
   const rulesPath = join(JOURNAL_DIR, rulesFilename);
   const writeJournalPath = await getWriteJournal();
 
-  await writeFile(tmpPath, csvContent, "utf-8");
+  const content = await normalizeCsvForHledger(csvContent, rulesPath);
+  await writeFile(tmpPath, content, "utf-8");
   pendingImports.set(token, {
     csvPath: tmpPath,
     rulesPath,
@@ -885,7 +1026,11 @@ export async function importCsvConfirm(
 
   // Let hledger find the rules-keyed .latest so dedup works per rules file
   const rulesFilename = basename(pending.rulesPath);
+  const hledgerCsvPath = pending.normalizedPath ?? pending.csvPath;
   await applyLatestFromRules(rulesFilename, pending.csvPath);
+  if (hledgerCsvPath !== pending.csvPath) {
+    await applyLatestFromRules(rulesFilename, hledgerCsvPath);
+  }
 
   // Read the .latest date for application-level dedup
   let latestDate = "";
@@ -902,7 +1047,7 @@ export async function importCsvConfirm(
 
   try {
     const { stdout, stderr } = await execAsync(
-      `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${pending.rulesPath}" "${pending.csvPath}"`,
+      `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${pending.rulesPath}" "${hledgerCsvPath}"`,
     );
     const raw = [stdout, stderr].filter(Boolean).join("\n").trim();
     const output = normalizePreview(raw);
@@ -983,6 +1128,7 @@ export async function importCsvConfirm(
     return { success: false, error: msg.split("\n").slice(0, 3).join(" ") };
   } finally {
     if (pending.isTemp) await unlink(pending.csvPath).catch(() => {});
+    if (pending.normalizedPath) await unlink(pending.normalizedPath).catch(() => {});
   }
 }
 
@@ -997,19 +1143,35 @@ export async function importCsvPreviewPath(
   const rulesPath = join(JOURNAL_DIR, rulesFilename);
   const writeJournalPath = await getWriteJournal();
 
+  // Write a sign-normalized working copy when the rules split credit/debit —
+  // hledger's amount-in - amount-out would otherwise flip negative debits.
+  const rawCsv = await readFile(csvAbs, "utf-8").catch(() => "");
+  const normalized = await normalizeCsvForHledger(rawCsv, rulesPath);
+  let hledgerCsvPath = csvAbs;
+  let normalizedPath: string | undefined;
+  if (normalized !== rawCsv) {
+    const { writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    normalizedPath = join(tmpdir(), `hledger-fixed-${token}.csv`);
+    await writeFile(normalizedPath, normalized, "utf-8");
+    hledgerCsvPath = normalizedPath;
+  }
+
   pendingImports.set(token, {
     csvPath: csvAbs,
     rulesPath,
     ts: Date.now(),
     isTemp: false,
+    normalizedPath,
   });
 
   try {
   // Ensure CSV-keyed .latest is in place for hledger's built-in dedup
     await applyLatestFromRules(rulesFilename, csvAbs);
+    if (normalizedPath) await applyLatestFromRules(rulesFilename, normalizedPath);
 
     const { stdout, stderr } = await execAsync(
-      `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${rulesPath}" "${csvAbs}"`,
+      `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${rulesPath}" "${hledgerCsvPath}"`,
     );
     const raw = [stdout, stderr].filter(Boolean).join("\n").trim();
     const output = normalizePreview(raw);
@@ -1033,6 +1195,7 @@ function prunePendingImports(unlink: (path: string) => Promise<void>): void {
     if (now - v.ts > PENDING_IMPORT_TTL) {
       pendingImports.delete(k);
       unlink(v.csvPath).catch(() => {});
+      if (v.normalizedPath) unlink(v.normalizedPath).catch(() => {});
     }
   }
 }

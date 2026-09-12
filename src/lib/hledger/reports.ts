@@ -680,6 +680,9 @@ export async function getPortfolioData(months: number = 12): Promise<{
     .map((row) => ({ name: row[0] as string, balance: pickAmount(row[3]) }))
     .filter((a) => Math.abs(a.balance) > 0.01);
 
+  const mktTotal = accounts.reduce((s, a) => s + a.balance, 0);
+  const costTotal = costAccounts.reduce((s, a) => s + a.balance, 0);
+
   const mktSubs: CbrSubreport[] = mktHistJson?.cbrSubreports ?? [];
   const mktAssetHist = findSubreport(mktSubs, /asset/i)?.[1];
   const mktDates: any[] = mktHistJson?.cbrDates ?? [];
@@ -695,6 +698,17 @@ export async function getPortfolioData(months: number = 12): Promise<{
     month: periodStart(d),
     total: pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]),
   }));
+
+  // The monthly report values the current (in-progress) month's bucket at month end,
+  // so it can pick up prices/transactions dated later this month than today. Clamp the
+  // final point to the live "as of today" snapshot (_e tomorrow) so the chart's last
+  // value always matches the Total Value card.
+  if (history.length > 0 && accounts.length > 0) {
+    history[history.length - 1].total = mktTotal;
+  }
+  if (costHistory.length > 0 && costAccounts.length > 0) {
+    costHistory[costHistory.length - 1].total = costTotal;
+  }
 
   return { accounts, costAccounts, history, costHistory };
 }
@@ -820,11 +834,21 @@ export async function getUnrealizedGains(months: number = 12): Promise<Unrealize
   const now = new Date();
   const range = lastNMonths(months);
 
-  const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson] = await Promise.all([
+  const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson, mktSnapJson, costSnapJson] = await Promise.all([
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["bal", "income:capital-gains", "--monthly", "--flat", "-p", range]),
+    runJson<any>(["bal", "-V", "assets:investments", "--flat", "-e", "tomorrow"]),
+    runJson<any>(["bal", "-B", "assets:investments", "--flat", "-e", "tomorrow"]),
   ]);
+
+  const snapRows = (j: any) => (Array.isArray(j) ? (j[0] ?? []) : []);
+  const snapTotal = (rows: any[]) =>
+    rows
+      .filter((row: any) => row[0] && row[0] !== "assets:investments")
+      .reduce((s: number, row: any) => s + pickAmount(row[3]), 0);
+  const currentMkt = snapTotal(snapRows(mktSnapJson));
+  const currentCost = snapTotal(snapRows(costSnapJson));
 
   const mktSubs: CbrSubreport[] = mktMonthlyJson?.cbrSubreports ?? [];
   const mktAssetHist = findSubreport(mktSubs, /asset/i)?.[1];
@@ -847,8 +871,11 @@ export async function getUnrealizedGains(months: number = 12): Promise<Unrealize
   const monthly: { month: string; cumulative: number }[] = [];
   for (let i = 0; i < mktDates.length; i++) {
     const month = periodStart(mktDates[i]);
-    const mktTotal = pickAmount(mktAssetHist?.prTotals?.prrAmounts?.[i]);
-    const costTotal = pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]);
+    // Value the current (in-progress) month at today, matching the portfolio snapshots,
+    // so gains reconcile with Total Value - Cost Basis rather than month-end (future).
+    const isCurrent = i === mktDates.length - 1;
+    const mktTotal = isCurrent && currentMkt !== 0 ? currentMkt : pickAmount(mktAssetHist?.prTotals?.prrAmounts?.[i]);
+    const costTotal = isCurrent && currentCost !== 0 ? currentCost : pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]);
     const realizedThisPeriod = realizedByMonth.get(month) ?? 0;
     cumRealized += realizedThisPeriod;
     monthly.push({ month, cumulative: (mktTotal - costTotal) + cumRealized });

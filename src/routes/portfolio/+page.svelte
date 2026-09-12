@@ -129,10 +129,11 @@
           bodyColor: theme.chartColors().tooltipBody,
           callbacks: {
             label: (ctx: any) => {
-              const val = ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 0 });
+              const y = ctx.parsed.y;
+              const val = y.toLocaleString('en-US', { minimumFractionDigits: 0 });
               if (ctx.datasetIndex === 0) return ` Cost Basis: $${val}`;
               const cost = data.costHistory[ctx.dataIndex]?.total ?? 0;
-              const diff = val - cost;
+              const diff = y - cost;
               const sign = diff >= 0 ? '+' : '−';
               return ` Market: $${val} (${sign}$${Math.abs(diff).toLocaleString('en-US', { minimumFractionDigits: 0 })})`;
             }
