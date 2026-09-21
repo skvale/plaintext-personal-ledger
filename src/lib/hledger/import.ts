@@ -566,6 +566,12 @@ export function serializeRulesFile({ header, items }: ParsedRulesFile): string {
 // The directives are scanned from the whole file (any top-level line), not just
 // the lines before the first `if`, so hand-edited rules files still work.
 
+/** hledger accepts several aliases for the credit/debit amount fields. */
+const FIELD_ALIASES: Record<string, string> = {
+  amount1: "amount-in",
+  amount2: "amount-out",
+};
+
 /** Extract `skip N` and `fields a, b, ...` from any top-level rules file lines. */
 function parseRulesHeaderDirectives(
   raw: string,
@@ -578,11 +584,13 @@ function parseRulesHeaderDirectives(
     if (t.startsWith("skip ")) {
       skip = parseInt(t.slice(5).replace(/;.*$/, ""), 10) || 0;
     } else if (t.startsWith("fields ")) {
+      // Keep empty slots: hledger matches the fields line positionally, so
+      // skipped columns shift the index of every later field. Tools that map
+      // cells back to columns must use the same (non-collapsed) positions.
       fields = t
         .slice(7)
         .split(",")
-        .map((f) => f.trim())
-        .filter(Boolean);
+        .map((f) => FIELD_ALIASES[f.trim()] ?? f.trim());
     }
   }
   return { skip, fields };
@@ -629,27 +637,35 @@ function csvCellSpans(line: string): { cells: string[]; spans: [number, number][
 }
 
 /**
- * Flip the sign of negative values in the amount-out column of a CSV so
- * hledger's `-(amount-out)` term produces a negative (correct) posting.
+ * Flip the sign of negative values in one of the amount columns of a CSV.
+ * hledger computes the account1 posting as `amount-in - amount-out`; a
+ * negative in either column therefore lands with the wrong sign on expenses
+ * (the balance posting to account2 is always -account1).
+ *   - negative amount-out (a refund entered as a negative debit) must be
+ *     flattened when account1 is the expense account (expense convention);
+ *   - negative amount-in (a refund entered as a negative credit) must be
+ *     flattened when account1 is an asset/liability (balance convention),
+ *     otherwise the balancing expense comes out positive.
  * Returns the transformed content, or null when nothing needed fixing.
  * Only the affected cell is rewritten — all other lines/cells are preserved
  * verbatim so quoted commas and column alignment survive.
  */
-function normalizeAmountOutNegatives(
+function normalizeColumnNegatives(
   content: string,
   skip: number,
   fields: string[],
+  target: "amount-in" | "amount-out",
 ): string | null {
-  const outIdx = fields.indexOf("amount-out");
-  if (outIdx < 0) return null;
+  const idx = fields.indexOf(target);
+  if (idx < 0) return null;
 
   const lines = content.split(/\r?\n/);
   let changed = false;
   const out = lines.map((line, i) => {
     if (i < skip || !line.trim()) return line;
     const { spans } = csvCellSpans(line);
-    if (outIdx >= spans.length) return line;
-    const [s, e] = spans[outIdx];
+    if (idx >= spans.length) return line;
+    const [s, e] = spans[idx];
     const cell = line.slice(s, e);
     const trimmed = cell.trim();
     const inner = trimmed.startsWith('"') && trimmed.endsWith('"') ? trimmed.slice(1, -1) : trimmed;
@@ -665,7 +681,7 @@ function normalizeAmountOutNegatives(
   return changed ? out.join("\n") : null;
 }
 
-/** Apply the amount-out sign fix to CSV content based on its rules file. */
+/** Apply the amount-column sign fixes to CSV content based on its rules file. */
 async function normalizeCsvForHledger(
   csvContent: string,
   rulesPath: string,
@@ -673,15 +689,16 @@ async function normalizeCsvForHledger(
   try {
     const rulesRaw = await readFile(rulesPath, "utf-8");
     const { skip, fields } = parseRulesHeaderDirectives(rulesRaw);
-    // Only flip signs when the computed amount lands on an expense/income-style
-    // account (the convention this app generates). When account1 is an asset or
-    // liability (the other hledger convention), -(amount-out) is already correct
-    // and flipping would corrupt it.
     const account1 = rulesRaw.match(/^account1\s+(\S+)/m)?.[1];
-    if (account1 && /^(assets|liabilities|equity)/.test(account1)) {
-      return csvContent;
-    }
-    const fixed = normalizeAmountOutNegatives(csvContent, skip, fields);
+    // account1 holds the computed amount; account2 gets its negation. Which
+    // column sign to flatten depends on which side the expense lands on:
+    //   expenses/income convention (account1 is a P&L account): flatten
+    //     negative amount-out so -(amount-out) yields a negative expense;
+    //   balance convention (account1 is assets/liabilities/equity): flatten
+    //     negative amount-in so the balancing expense comes out negative.
+    const balanceConvention = /^(assets|liabilities|equity)/.test(account1 ?? "");
+    const target: "amount-in" | "amount-out" = balanceConvention ? "amount-in" : "amount-out";
+    const fixed = normalizeColumnNegatives(csvContent, skip, fields, target);
     return fixed ?? csvContent;
   } catch {
     return csvContent;

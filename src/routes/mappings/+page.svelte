@@ -764,9 +764,17 @@
     items = items.map((x) => {
       if (x.type !== "rule" || x.id !== id) return x;
       if (skip) {
-        return { ...x, account: "SKIP", assignments: [{ key: "SKIP", value: "" }] };
+        return {
+          ...x,
+          account: "SKIP",
+          assignments: [{ key: "SKIP", value: "" }],
+        };
       }
-      return { ...x, account: "", assignments: [{ key: "account2", value: "" }] };
+      return {
+        ...x,
+        account: "",
+        assignments: [{ key: "account2", value: "" }],
+      };
     });
     mark();
   }
@@ -939,7 +947,7 @@
 
 <LearningBanner id="mappings" title="Auto-categorizing imports">
   Import mappings automatically categorize your transactions into the right
-  accounts. For example: "anything with WHOLE FOODS in the description goes to
+  accounts. For example: "anything with COSTCO in the description goes to
   expenses:food:groceries." The more mappings you add, the less manual
   categorization you'll need to do after each import.
 </LearningBanner>
@@ -1058,8 +1066,8 @@
             <button
               type="submit"
               class="ml-1 inline-block text-slate-500 hover:text-rose-400 transition-colors"
-              title="Delete"
-            >✕</button>
+              title="Delete">✕</button
+            >
           </form>
         </a>
       {/if}

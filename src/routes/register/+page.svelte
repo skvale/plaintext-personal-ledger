@@ -14,14 +14,17 @@
   let { data }: { data: PageData } = $props();
 
   let account = $state<string>(data.account);
-  let query = $state<string>('');
-  let from = $state<string>('');
-  let to = $state<string>('');
+  let query = $state<string>(data.query);
+  let from = $state<string>(data.from);
+  let to = $state<string>(data.to);
   let currentPage = $state(Number($page.url.searchParams.get('page')) || 1);
+  let searchFocused = $state(false);
 
   $effect(() => {
     account = data.account;
-    query = data.query;
+    // Don't clobber in-progress typing: when the search box has focus, the value
+    // the user is entering wins over whatever the last navigation round-tripped.
+    if (!searchFocused) query = data.query;
     from = data.from;
     to = data.to;
     currentPage = Number($page.url.searchParams.get('page')) || 1;
@@ -37,8 +40,10 @@
 
 
   function applyFilters(replace = false) {
-    // If the query matches an account name, use the account filter instead
-    if (query && !account) {
+    // If the query matches an account name, use the account filter instead.
+    // Skip pure numbers: those are amount searches, and auto-converting them
+    // to an account hijacks the query (an account like "…2204" would eat "22").
+    if (query && !account && !/^[+-]?[\d,]+(\.\d+)?$/.test(query)) {
       const q = query.toLowerCase();
       const match = data.accounts.find(a => a.toLowerCase().includes(q));
       if (match) {
@@ -75,10 +80,8 @@
 
   type PeriodMode = 'month' | 'year' | 'all';
 
-  // Derive period mode and anchor from URL params
-  function initPeriod(): { mode: PeriodMode; anchor: { year: number; month: number } } {
-    const f = data.from;
-    const t = data.to;
+  // Derive period mode and anchor from a from/to pair (same logic the URL load uses)
+  function modeForDates(f: string, t: string): { mode: PeriodMode; anchor: { year: number; month: number } } {
     if (!f && !t) return { mode: 'all', anchor: { year: new Date().getFullYear(), month: new Date().getMonth() } };
     if (f) {
       const d = new Date(f + 'T00:00:00');
@@ -90,6 +93,20 @@
       return { mode: 'month', anchor };
     }
     return { mode: 'all', anchor: { year: new Date().getFullYear(), month: new Date().getMonth() } };
+  }
+
+  function initPeriod(): { mode: PeriodMode; anchor: { year: number; month: number } } {
+    return modeForDates(data.from, data.to);
+  }
+
+  function clearFilter(key: 'account' | 'from' | 'to') {
+    if (key === 'account') account = '';
+    if (key === 'from') from = '';
+    if (key === 'to') to = '';
+    const m = modeForDates(from, to);
+    periodMode = m.mode;
+    periodAnchor = m.anchor;
+    applyFilters();
   }
 
   const initial = initPeriod();
@@ -157,8 +174,8 @@
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       // Only apply if we're still on the register page
-      if ($page.url.pathname === '/register') applyFilters();
-    }, 400);
+      if ($page.url.pathname === '/register') applyFilters(true);
+    }, 500);
   }
 
   // For expenses: sum of matching postings. For assets/liabilities: current balance.
@@ -291,18 +308,29 @@
 <!-- Filters -->
 <div class="mb-3 flex items-end gap-2">
   <div class="flex min-w-0 flex-1 flex-col gap-1">
-    <span class="text-xs font-medium text-slate-100">Description</span>
+    <span class="text-xs font-medium text-slate-100">Search</span>
     <input
       class="w-full rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300"
       type="search"
       placeholder="Search…"
       bind:value={query}
+      onfocus={() => (searchFocused = true)}
+      onblur={() => (searchFocused = false)}
       onkeydown={(e) => { if (e.key === 'Enter') { clearTimeout(debounceTimer); applyFilters(); } }}
       oninput={() => debounceSearch()}
     />
   </div>
   <div class="flex w-56 shrink-0 flex-col gap-1">
-    <span class="text-xs font-medium text-slate-100">Account</span>
+    <span class="flex items-center gap-1 text-xs font-medium text-slate-100">
+      Account
+      {#if account}
+        <button
+          class="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-rose-400"
+          aria-label="Clear account filter"
+          onclick={() => clearFilter('account')}
+        >✕</button>
+      {/if}
+    </span>
     <Combobox
       items={data.accounts}
       value={account}
@@ -313,11 +341,29 @@
     />
   </div>
   <div class="flex w-40 shrink-0 flex-col gap-1">
-    <span class="text-xs font-medium text-slate-100">From</span>
+    <span class="flex items-center gap-1 text-xs font-medium text-slate-100">
+      From
+      {#if from}
+        <button
+          class="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-rose-400"
+          aria-label="Clear from date"
+          onclick={() => clearFilter('from')}
+        >✕</button>
+      {/if}
+    </span>
     <DatePicker bind:value={from} onchange={() => { periodMode = 'month'; applyFilters(); }} />
   </div>
   <div class="flex w-40 shrink-0 flex-col gap-1">
-    <span class="text-xs font-medium text-slate-100">To</span>
+    <span class="flex items-center gap-1 text-xs font-medium text-slate-100">
+      To
+      {#if to}
+        <button
+          class="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-rose-400"
+          aria-label="Clear to date"
+          onclick={() => clearFilter('to')}
+        >✕</button>
+      {/if}
+    </span>
     <DatePicker bind:value={to} onchange={() => { periodMode = 'month'; applyFilters(); }} />
   </div>
 </div>

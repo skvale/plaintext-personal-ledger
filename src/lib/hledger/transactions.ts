@@ -17,6 +17,25 @@ import { sortJournalByDate } from "./journal-maintenance.js";
 
 const execAsync = promisify(exec);
 
+/**
+ * Amount-search matcher: string-prefix on a posting's magnitude, against both the
+ * raw decimal value and its rounded integer form (the "$N" shown when decimals
+ * are hidden, e.g. 49.95 displays as 50).
+ */
+function postingStartsWith(p: any, prefix: string): boolean {
+  for (const a of p.pamount ?? []) {
+    const n = a?.aquantity?.floatingPoint;
+    if (typeof n !== "number") continue;
+    const abs = Math.abs(n);
+    // Match the raw value, its 2-decimal rendering (e.g. 50.4 shows as 50.40),
+    // or its rounded whole-dollar form (49.95 shows as $50 when decimals are hidden).
+    for (const s of [String(abs), abs.toFixed(2), String(Math.round(abs))]) {
+      if (s.startsWith(prefix)) return true;
+    }
+  }
+  return false;
+}
+
 // ─── Tag Extraction Helper ────────────────────────────────────────────────────
 
 /**
@@ -101,19 +120,31 @@ export async function getTransactions(
   if (opts.to) args.push("-e", opts.to);
   if (opts.account) args.push(opts.account);
   const queryStr = opts.query?.replace(/"/g, "") ?? "";
-  if (queryStr) args.push(`desc:"${queryStr}"`);
 
-  let raw = await runJson<any[]>(args);
-  if (!raw) raw = [];
+  // Matches a bare number (e.g. "50", "50.29", "1,000"). These search by amount.
+  const isNumeric = /^[+-]?[\d,]+(\.\d+)?$/.test(queryStr);
 
-  // If description search returned nothing, try matching account names instead
-  if (raw.length === 0 && queryStr) {
-    const acctArgs = ["print", "-B"];
-    if (opts.from) acctArgs.push("-b", opts.from);
-    if (opts.to) acctArgs.push("-e", opts.to);
-    acctArgs.push(`acct:"${queryStr}"`);
-    raw = (await runJson<any[]>(acctArgs)) ?? [];
+  let raw: any[];
+  if (!queryStr) {
+    raw = (await runJson<any[]>(args)) ?? [];
+  } else if (isNumeric) {
+    // Amount search is a startswith match on posting magnitudes. Fetch the whole
+    // (account/date-scoped) set and filter in JS, since hledger can't prefix-match
+    // amounts. Match either the raw value or its rounded integer form (what shows
+    // when decimals are hidden), so "50" finds 50.29, 50.40, 49.95, etc.
+    const amtNum = queryStr.replace(/,/g, "");
+    raw = (await runJson<any[]>(args)) ?? [];
+    raw = raw.filter((tx) =>
+      (tx.tpostings ?? []).some((p: any) => postingStartsWith(p, amtNum))
+    );
+  } else {
+    // Description search first, then account-name search as a fallback.
+    raw = (await runJson<any[]>([...args, `desc:"${queryStr}"`])) ?? [];
+    if (raw.length === 0) {
+      raw = (await runJson<any[]>([...args, `acct:"${queryStr}"`])) ?? [];
+    }
   }
+  raw = raw ?? [];
   const dropN = opts.drop ?? 0;
 
   const dropAcct = (acct: string) =>
