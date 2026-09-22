@@ -143,6 +143,7 @@ export async function getBalanceSheetMultiMonth(
       "balancesheet",
       "-V",
       "--tree",
+      "--no-elide",
       "--auto",
       "--depth",
       "6",
@@ -184,6 +185,7 @@ export async function getBalanceSheetMultiMonth(
       type: "asset" | "liability";
       past: number[];
       now: number;
+      inPast: boolean;
     }
   >();
 
@@ -200,7 +202,7 @@ export async function getBalanceSheetMultiMonth(
       const depth = fullName.split(":").length - 1;
       if (depth === 0) continue;
       const past = Array.from({ length: pastCols }, (_, i) => cell(i, row));
-      accounts.set(fullName, { name: fullName, depth, type, past, now: 0 });
+      accounts.set(fullName, { name: fullName, depth, type, past, now: 0, inPast: true });
     }
   };
 
@@ -233,6 +235,7 @@ export async function getBalanceSheetMultiMonth(
           type,
           past: Array(pastCols).fill(0),
           now: value,
+          inPast: false,
         });
       }
     }
@@ -241,12 +244,34 @@ export async function getBalanceSheetMultiMonth(
   setNow(assetSubNow, "asset");
   setNow(liabSubNow, "liability");
 
-  const flat = [...accounts.values()].map(({ name, depth, type, past, now }) => ({
-    name,
-    depth,
-    type,
-    amounts: [...past, now],
-  }));
+  // Rows from the current snapshot's --no-elide can introduce intermediate
+  // parents (single-child chains) that past monthly snapshots elided away.
+  // Drop such head-of-chain rows — their full value already lives in the
+  // child row, and keeping them garbles the tree indentation in the UI.
+  const dropped = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [fullName, acc] of accounts) {
+      if (acc.inPast || dropped.has(fullName)) continue;
+      const children = [...accounts.keys()].filter(
+        (n) => n.startsWith(fullName + ":") && !dropped.has(n),
+      );
+      if (children.length === 1) {
+        dropped.add(fullName);
+        changed = true;
+      }
+    }
+  }
+
+  const flat = [...accounts]
+    .filter(([fullName]) => !dropped.has(fullName))
+    .map(([, { name, depth, type, past, now }]) => ({
+      name,
+      depth,
+      type,
+      amounts: [...past, now],
+    }));
 
   const pastAssetTotals = pastDates.map((_: any, i: number) =>
     pickAmount(assetSubPast?.prTotals?.prrAmounts?.[i]),
