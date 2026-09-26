@@ -246,27 +246,29 @@ export async function getBalanceSheetMultiMonth(
 
   // Rows from the current snapshot's --no-elide can introduce intermediate
   // parents (single-child chains) that past monthly snapshots elided away.
-  // Drop such head-of-chain rows — their full value already lives in the
-  // child row, and keeping them garbles the tree indentation in the UI.
-  const dropped = new Set<string>();
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const [fullName, acc] of accounts) {
-      if (acc.inPast || dropped.has(fullName)) continue;
-      const children = [...accounts.keys()].filter(
-        (n) => n.startsWith(fullName + ":") && !dropped.has(n),
-      );
-      if (children.length === 1) {
-        dropped.add(fullName);
-        changed = true;
-      }
+  // Keep them so children nest under their parent in the UI, backfill their
+  // past columns from their descendants, and sort so parents precede children.
+  const all = [...accounts.values()];
+  const directChildren = (acc: { name: string; depth: number }) =>
+    all.filter(
+      (o) =>
+        o.name.startsWith(acc.name + ":") &&
+        o.name.split(":").length === acc.depth + 2,
+    );
+
+  // Bottom-up so grandchildren backfill before their parents
+  for (const acc of all.sort((a, b) => b.depth - a.depth)) {
+    if (acc.inPast) continue;
+    const children = directChildren(acc);
+    if (children.length === 0) continue;
+    for (let i = 0; i < acc.past.length; i++) {
+      acc.past[i] = children.reduce((s, c) => s + c.past[i], 0);
     }
   }
 
-  const flat = [...accounts]
-    .filter(([fullName]) => !dropped.has(fullName))
-    .map(([, { name, depth, type, past, now }]) => ({
+  const flat = all
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ name, depth, type, past, now }) => ({
       name,
       depth,
       type,
