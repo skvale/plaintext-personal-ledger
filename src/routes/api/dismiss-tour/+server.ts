@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import { writeFile } from 'node:fs/promises';
 import { getSettings, SETTINGS_FILE } from '#lib/hledger.server.js';
 import type { RequestHandler } from './$types.js';
@@ -15,17 +14,17 @@ export const POST: RequestHandler = async ({ request }) => {
       settings.learning.dismissedTips.push(tipKey);
       await writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
     }
-    return json({ ok: true });
+    return Response.json({ ok: true });
   }
 
   // Dismiss entire tour (legacy)
-  if (!id || typeof id !== 'string') return json({ error: 'Missing id' }, { status: 400 });
+  if (!id || typeof id !== 'string') return Response.json({ error: 'Missing id' }, { status: 400 });
   if (!settings.learning.completedTours.includes(id)) {
     settings.learning.completedTours.push(id);
     await writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
   }
 
-  return json({ ok: true });
+  return Response.json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async () => {
@@ -33,5 +32,5 @@ export const DELETE: RequestHandler = async () => {
   settings.learning.completedTours = [];
   settings.learning.dismissedTips = [];
   await writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
-  return json({ ok: true });
+  return Response.json({ ok: true });
 };

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import LearningBanner from '#lib/components/LearningBanner.svelte';
 
   let { data, form } = $props();
@@ -8,7 +8,7 @@
   let fixing = $state(false);
 
   $effect(() => {
-    if (form?.fixed) invalidateAll();
+    if (form?.fixed) refreshAll();
   });
 </script>
 
@@ -67,7 +67,7 @@
   <!-- Balance assertion fix -->
   {#if p.type === 'balance-assertion' && p.actualBalance}
     <div class="mb-5 rounded-xl border border-slate-400 bg-slate-900 p-5">
-      <p class="mb-4 text-xs font-semibold tracking-wide text-slate-100">ACCOUNT</p>
+      <p class="mb-4 text-xs font-semibold tracking-wide text-slate-100">Account</p>
       <p class="mb-4 font-mono text-sm text-slate-100">{p.account}</p>
       <div class="mb-4 grid grid-cols-2 gap-4">
         <div>

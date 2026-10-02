@@ -236,7 +236,7 @@
     </p>
   </div>
   {#if activeTab === 'forecast'}
-    <MonthSelector value={months} onchange={(n) => { months = n; goto(`/forecast?months=${n}`, { replaceState: true }); }} />
+    <MonthSelector value={months} onchange={(n) => { months = n; goto(`/forecast?months=${n}`, { replace: true }); }} />
   {/if}
 </div>
 

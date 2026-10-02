@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import LearningBanner from '#lib/components/LearningBanner.svelte';
 
   let { data, form } = $props();
@@ -27,7 +27,7 @@
   let fetchError = $state('');
 
   $effect(() => {
-    if (form?.saved || form?.populateDone) invalidateAll();
+    if (form?.saved || form?.populateDone) refreshAll();
   });
 
   $effect(() => {
@@ -190,7 +190,7 @@
         editError = '';
         return async ({ result, update }) => {
           editSaving = false;
-          if (result.type === 'success') { editing = false; editError = ''; await invalidateAll(); }
+          if (result.type === 'success') { editing = false; editError = ''; await refreshAll(); }
           else if (result.type === 'failure') { editError = (result.data as any)?.error ?? 'Save failed'; }
           await update();
         };

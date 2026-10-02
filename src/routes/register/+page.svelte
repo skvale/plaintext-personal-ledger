@@ -57,7 +57,7 @@
     if (query) params.set('q', query);
     params.set('from', from);
     if (to) params.set('to', to);
-    goto(`/register?${params.toString()}`, { replaceState: replace, keepFocus: true });
+    goto(`/register?${params.toString()}`, { replace: replace, reset: false });
   }
 
   function clearFilters() {
@@ -68,15 +68,15 @@
     periodAnchor = { year: new Date().getFullYear(), month: new Date().getMonth() };
     from = '';
     to = '';
-    goto('/register', { replaceState: true });
+    goto('/register', { replace: true });
   }
 
   function goToPage(p: number) {
-    const url = new URL(page.url);
+    const url = new URL(page.url.href);
 
     if (p <= 1) url.searchParams.delete('page'); else url.searchParams.set('page', String(p));
 
-    goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
+    goto(url.toString(), { replace: true, reset: false });
   }
 
   type PeriodMode = 'month' | 'year' | 'all';
@@ -519,8 +519,8 @@
                 {@const byCommodity = Object.groupBy(matchPostings, (p) => p.commodity || '$')}
                 {@const commodities = Object.entries(byCommodity)}
                 {#each commodities as [commodity, posts], i}
-                  {@const totalAmt = posts.reduce((s, p) => s + p.amount, 0)}
-                  {@const amtAccount = posts[0].account}
+                  {@const totalAmt = (posts ?? []).reduce((s, p) => s + p.amount, 0)}
+                  {@const amtAccount = posts?.[0]?.account ?? ''}
                   <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} commodity={commodity !== '$' ? commodity : undefined} />
                   {#if i < commodities.length - 1}<span class="text-slate-100"> + </span>{/if}
                 {/each}

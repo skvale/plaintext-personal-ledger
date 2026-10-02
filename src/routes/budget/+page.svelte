@@ -79,7 +79,7 @@
   <div class="flex gap-1">
     {#each periods as p}
       <button
-        onclick={() => goto(`/budget?period=${p.value}`, { replaceState: true })}
+        onclick={() => goto(`/budget?period=${p.value}`, { replace: true })}
         class="rounded-md border border-slate-300 bg-slate-900 px-2.5 py-1 text-sm transition-colors
           {data.period === p.value ? 'border-blue-300/50 text-blue-500' : 'text-slate-100 hover:border-slate-400 hover:text-slate-100'}"
       >{p.label}</button>

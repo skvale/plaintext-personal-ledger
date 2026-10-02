@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { applyAction, enhance } from '$app/forms';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, refreshAll } from '$app/navigation';
   import { page } from '$app/state';
   import { acquireSaveLock, releaseSaveLock } from '#lib/nav-lock.js';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
@@ -150,7 +150,7 @@
             // If the navigation never landed we are still on the form, and the
             // journal has moved on underneath us — catch up now.
             releaseSaveLock();
-            if (page.url.pathname === '/add') await invalidateAll();
+            if (page.url.pathname === '/add') await refreshAll();
           }
         } else {
           releaseSaveLock();

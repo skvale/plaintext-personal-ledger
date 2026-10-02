@@ -71,7 +71,7 @@
         <div class="flex-1 min-w-0">
           <span
             class="inline-block w-full rounded-md border border-slate-500 bg-slate-900 px-2 py-1 font-mono text-sm italic text-slate-500"
-            >SKIP</span
+            >Skip</span
           >
         </div>
       {:else}

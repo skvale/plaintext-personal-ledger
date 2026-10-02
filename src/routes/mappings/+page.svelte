@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { goto, refreshAll } from "$app/navigation";
   import {
     DndContext,
     DragOverlay,
@@ -1147,7 +1147,7 @@
             }
             if (createdFromCsv) {
               csvFileSelected = "";
-              await invalidateAll();
+              await refreshAll();
               goto(`/mappings?file=${encodeURIComponent(createdFromCsv)}`);
             } else {
               createError = "Create failed";

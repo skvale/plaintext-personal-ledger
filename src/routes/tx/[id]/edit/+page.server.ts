@@ -1,5 +1,6 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { safeReturnTo } from '#lib/return-to.js';
 import {
   getTransactionForEdit,
   updateTransaction,
@@ -9,7 +10,7 @@ import {
 } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ params, url }) => {
-  const ref = url.searchParams.get('ref') ?? '/register';
+  const ref = safeReturnTo(url.searchParams.get('ref'));
   const [txn, accounts, vendorRows] = await Promise.all([
     getTransactionForEdit(params.id),
     getAccountNames(),
@@ -24,7 +25,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 export const actions: Actions = {
   update: async ({ params, request, url }) => {
     const data = await request.formData();
-    const ref = (data.get('ref') as string) ?? url.searchParams.get('ref') ?? '/register';
+    const ref = safeReturnTo((data.get('ref') as string) ?? url.searchParams.get('ref'));
 
     const date = (data.get('date') as string)?.trim();
     const vendor = (data.get('vendor') as string)?.trim();

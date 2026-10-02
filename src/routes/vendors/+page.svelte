@@ -37,7 +37,7 @@
   const mm = $derived(data.multiMonth);
 
   function setMonths(n: number) {
-    goto(`/vendors?months=${n}`, { replaceState: true, noScroll: true });
+    goto(`/vendors?months=${n}`, { replace: true, reset: false });
   }
 
   function fmtMonth(ym: string) {

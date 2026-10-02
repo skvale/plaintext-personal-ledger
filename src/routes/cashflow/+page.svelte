@@ -155,7 +155,7 @@
     <h1 class="text-xl font-semibold text-slate-100">Cash Flow</h1>
     <p class="mt-0.5 text-sm text-slate-100">How your bank and cash balances changed each month.</p>
   </div>
-  <MonthSelector value={months} onchange={(n) => { months = n; goto(`/cashflow?months=${n}`, { replaceState: true, noScroll: true }); }} />
+  <MonthSelector value={months} onchange={(n) => { months = n; goto(`/cashflow?months=${n}`, { replace: true, reset: false }); }} />
 </div>
 
 <!-- Chart -->

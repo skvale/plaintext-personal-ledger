@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import { onMount } from 'svelte';
 
   interface Tip {
@@ -58,7 +58,7 @@
     if (safeIndex >= remainingTips.length - 1 && currentIndex > 0) {
       currentIndex--;
     }
-    await invalidateAll();
+    await refreshAll();
   }
 
   async function dismissAll() {
@@ -67,7 +67,7 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id })
     });
-    await invalidateAll();
+    await refreshAll();
   }
 </script>
 

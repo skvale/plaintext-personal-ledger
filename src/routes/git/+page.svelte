@@ -39,7 +39,7 @@
   function viewCommit(hash: string) {
     const next = activeCommit === hash ? null : hash;
     activeCommitOverride = next;
-    goto(next ? `/git?commit=${hash}` : '/git', { replaceState: true });
+    goto(next ? `/git?commit=${hash}` : '/git', { replace: true });
   }
 
   // ── Diff parser ──────────────────────────────────────────────────────────────

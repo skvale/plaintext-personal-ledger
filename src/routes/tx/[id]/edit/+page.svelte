@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, refreshAll } from '$app/navigation';
   import { page } from '$app/state';
   import { acquireSaveLock, releaseSaveLock } from '#lib/nav-lock.js';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
@@ -125,7 +125,7 @@
             // journal has moved on underneath us — catch up now.
             releaseSaveLock();
             if (page.url.pathname === `/tx/${page.params.id}/edit`) {
-              await invalidateAll();
+              await refreshAll();
             }
           }
         } else {

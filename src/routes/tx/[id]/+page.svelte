@@ -14,7 +14,7 @@
   import FilePreview from '#lib/components/FilePreview.svelte';
   import Combobox from '#lib/components/Combobox.svelte';
   import DatePicker from '#lib/components/DatePicker.svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const learningBeginner = $derived(page.data.settings?.learning?.enabled && page.data.settings?.learning?.level === 'beginner');
@@ -389,7 +389,7 @@
                   paying = true;
                   return async ({ result, update }) => {
                     paying = false;
-                    if (result.type === 'success') { showPayForm = false; await invalidateAll(); }
+                    if (result.type === 'success') { showPayForm = false; await refreshAll(); }
                     else if (result.type === 'failure') { payError = (result.data as any)?.payError ?? 'Failed'; }
                     await update();
                   };
@@ -640,7 +640,7 @@
             editSaving = true;
             return async ({ result, update }) => {
               editSaving = false;
-              if (result.type === 'success') { editingRaw = false; editError = ''; await invalidateAll(); }
+              if (result.type === 'success') { editingRaw = false; editError = ''; await refreshAll(); }
               else if (result.type === 'failure') { editError = (result.data as any)?.editError ?? 'Update failed'; await update(); }
             };
           }}

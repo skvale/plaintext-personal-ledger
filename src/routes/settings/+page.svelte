@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, refreshAll } from '$app/navigation';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
   import SettingsSortableItem from '#lib/components/SettingsSortableItem.svelte';
@@ -287,7 +287,7 @@ mappings:     { label: 'Import Mappings', icon: '⊟', description: 'Edit CSV im
             type="button"
             onclick={async () => {
               await fetch('/api/dismiss-tour', { method: 'DELETE' });
-              await invalidateAll();
+              await refreshAll();
             }}
             class="ml-auto rounded-md px-3 py-1.5 text-sm text-slate-100 hover:text-slate-100 transition-colors"
           >

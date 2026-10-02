@@ -3,7 +3,7 @@ const TTL_MS = 60_000;
 let acquiredAt = 0;
 
 /**
- * Suppresses SSE-driven invalidateAll() while a form action is in flight.
+ * Suppresses SSE-driven refreshAll() while a form action is in flight.
  *
  * Saving a transaction writes to the journal, which makes the server broadcast
  * `journal-changed`. That lands while the action's redirect `goto()` is still

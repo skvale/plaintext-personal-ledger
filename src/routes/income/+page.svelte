@@ -25,7 +25,7 @@
   const monthCount = $derived(data.monthCount ?? 1);
 
   function setMonths(n: number) {
-    goto(`/income?months=${n}`, { replaceState: true, noScroll: true });
+    goto(`/income?months=${n}`, { replace: true, reset: false });
   }
 
   const tableSections = $derived(mm

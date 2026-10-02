@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { getWriteJournal } from "./journal.js";
+import { getWriteJournal, runJournalCheck } from "./journal.js";
 import { execAsync } from "./exec.js";
 import { invalidateCache } from "./cache.js";
 
@@ -106,8 +106,7 @@ export async function sortJournal(): Promise<{
   await writeFile(journalPath, sorted, "utf-8");
 
   try {
-    const cmd = `hledger -f "${journalPath}" check`;
-    await execAsync(cmd);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {

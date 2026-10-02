@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { runJson } from "./cache.js";
 import { pickAmount, extractTag } from "./parsing.js";
-import { getWriteJournal } from "./journal.js";
+import { getWriteJournal, runJournalCheck } from "./journal.js";
 import { invalidateCache } from "./cache.js";
 import { execAsync } from "./exec.js";
 
@@ -171,8 +171,7 @@ export async function setTransactionCleared(
 
   await writeFile(journalPath, lines.join("\n"), "utf-8");
   try {
-    const cmd = `hledger -f "${journalPath}" check`;
-    await execAsync(cmd);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {

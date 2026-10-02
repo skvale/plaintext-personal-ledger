@@ -2,7 +2,7 @@ import { runJson } from "./cache.js";
 import { pickAmount, pickCommodity, extractTag } from "./parsing.js";
 import { invalidateCache } from "./cache.js";
 import { execAsync } from "./exec.js";
-import { getWriteJournal } from "./journal.js";
+import { getWriteJournal, runJournalCheck } from "./journal.js";
 import { getRulesFiles, getRulesContent, parseRulesFile } from "./import.js";
 import { getAccountNames } from "./transactions.js";
 import { suggestAccount } from "../keywords.js";
@@ -231,7 +231,7 @@ export async function recategorize(
 
   await writeFile(JOURNAL, newLines.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {

@@ -39,7 +39,7 @@
     const next = toYM(base);
     if (next > currentYM) return; // never go past current month
     const url = next === currentYM ? '/dashboard' : `/dashboard?month=${next}`;
-    goto(url, { replaceState: true });
+    goto(url, { replace: true });
   }
 
   const displayMonth = $derived(

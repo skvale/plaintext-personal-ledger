@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { writeFile, unlink } from 'node:fs/promises';
@@ -12,10 +11,10 @@ const execFileAsync = promisify(execFile);
 export const POST: RequestHandler = async ({ request }) => {
   const fd = await request.formData();
   const file = fd.get('file') as File | null;
-  if (!file || file.size === 0) return json({ error: 'No file' }, { status: 400 });
+  if (!file || file.size === 0) return Response.json({ error: 'No file' }, { status: 400 });
 
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (ext !== 'pdf') return json({ error: 'PDF only' }, { status: 400 });
+  if (ext !== 'pdf') return Response.json({ error: 'PDF only' }, { status: 400 });
 
   const tmp = join(tmpdir(), `hledger-pdf-${randomBytes(8).toString('hex')}.pdf`);
   try {
@@ -28,9 +27,9 @@ export const POST: RequestHandler = async ({ request }) => {
     const isEmpty = text.length < 20;
 
     // If text is basically empty, the PDF is likely scanned — note it but don't auto-OCR yet
-    return json({ text, isEmpty, pages: countPages(text) });
+    return Response.json({ text, isEmpty, pages: countPages(text) });
   } catch (e: any) {
-    return json({ error: e.message ?? 'Extraction failed' }, { status: 500 });
+    return Response.json({ error: e.message ?? 'Extraction failed' }, { status: 500 });
   } finally {
     await unlink(tmp).catch(() => {});
   }

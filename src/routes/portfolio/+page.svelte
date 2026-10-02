@@ -15,7 +15,7 @@
   const monthCount = $derived(data.monthCount ?? 1);
 
   function setMonths(n: number) {
-    goto(`/portfolio?months=${n}`, { replaceState: true, noScroll: true });
+    goto(`/portfolio?months=${n}`, { replace: true, reset: false });
   }
 
   const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
@@ -217,7 +217,7 @@
     </p>
   </div>
   <div class="rounded-xl border border-slate-400 bg-slate-900 p-4">
-    <p class="mb-2 text-xs font-semibold tracking-wide text-slate-100">YTD</p>
+    <p class="mb-2 text-xs font-semibold tracking-wide text-slate-100">Year to date</p>
     <p class="text-xl font-medium {data.gains.periods.ytd >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
       {fmtSigned(data.gains.periods.ytd)}
     </p>

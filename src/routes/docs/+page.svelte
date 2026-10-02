@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { page } from '$app/state';
-  import { invalidateAll, goto } from '$app/navigation';
+  import { refreshAll, goto } from '$app/navigation';
   import { tick, onMount } from 'svelte';
   import AccountLabel from '#lib/components/AccountLabel.svelte';
   import FileIcon from '#lib/components/FileIcon.svelte';
@@ -379,7 +379,7 @@
             }
             const url = new URL(window.location.href);
             url.searchParams.set('preview', '1');
-            pushState(url, {});
+            goto(url, { state: {}, shallow: true });
           } else if (result.type === 'failure') {
             previewError = (result.data as any)?.previewError ?? 'Preview failed.';
           }
@@ -489,7 +489,7 @@
                 importedCount = cData.imported ?? 0;
                 skippedCount = cData.skipped ?? 0;
                 importSuccess = true;
-                invalidateAll();
+                refreshAll();
               }
             }}
             class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -696,7 +696,7 @@
                   }
                   const url = new URL(window.location.href);
                   url.searchParams.set('preview', '1');
-                  pushState(url, {});
+                  goto(url, { state: {}, shallow: true });
                 }}
                 class="rounded-md bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -745,7 +745,7 @@
                 skippedCount = cData.skipped ?? 0;
                 importSuccess = true;
                 previewToken = '';
-                invalidateAll();
+                refreshAll();
               }
             }}
             class="rounded-md bg-blue-300 dark:bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-400 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -885,7 +885,7 @@
               return async ({ result, update }) => {
                 if (result.type === 'success') {
                   billSuccess = true;
-                  invalidateAll();
+                  refreshAll();
                 } else {
                   await update();
                 }
@@ -1125,7 +1125,7 @@
   <!-- Gap warnings -->
   {#if data.gaps.length > 0}
   <div class="mb-4 rounded-xl border border-amber-800/40 bg-amber-950/20 px-4 py-3">
-    <p class="mb-2 text-xs font-semibold tracking-wide text-amber-500">POSSIBLE MISSING STATEMENTS</p>
+    <p class="mb-2 text-xs font-semibold tracking-wide text-amber-500">Possible missing statements</p>
       <ul class="flex flex-col gap-1">
         {#each data.gaps as gap}
           <li class="font-mono text-sm text-amber-400/80">{gap}</li>
@@ -1311,7 +1311,7 @@
               const fd = new FormData();
               fd.set('relPath', deletingFile.relPath);
               const res = await fetch('?/deleteDoc', { method: 'POST', body: fd });
-            if (res.ok) { invalidateAll(); }
+            if (res.ok) { refreshAll(); }
               showDeleteConfirm = false;
               deletingFile = null;
             }}

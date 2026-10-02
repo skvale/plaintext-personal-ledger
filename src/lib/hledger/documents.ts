@@ -10,7 +10,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { runJson } from "./cache.js";
 import { extractTag } from "./parsing.js";
-import { STATEMENTS_DIR, READ_JOURNAL, getWriteJournal } from "./journal.js";
+import { STATEMENTS_DIR, READ_JOURNAL, getWriteJournal, runJournalCheck } from "./journal.js";
 import { invalidateCache } from "./cache.js";
 import type {
   DocFile,
@@ -716,7 +716,7 @@ export async function updateTransaction(
 
   await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${targetFile}" check`, { timeout: 15000 });
+    await runJournalCheck();
     const writeJournal = await getWriteJournal();
     if (targetFile === writeJournal) await sortJournalByDate();
     invalidateCache();
@@ -785,7 +785,7 @@ export async function updateTransactionRaw(
 
   await writeFile(targetFile, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${targetFile}" check`, { timeout: 15000 });
+    await runJournalCheck();
     const writeJournal = await getWriteJournal();
     if (targetFile === writeJournal) await sortJournalByDate();
     invalidateCache();
@@ -860,7 +860,7 @@ export async function deleteTransaction(
   const updated = [...fileLines.slice(0, localStart), ...fileLines.slice(localEnd)];
   await writeFile(blockSeg.file, updated.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${READ_JOURNAL}" check`);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {

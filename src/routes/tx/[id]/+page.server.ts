@@ -1,5 +1,6 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { safeReturnTo } from '#lib/return-to.js';
 import {
   getTransactionForEdit,
   getRelatedPayable,
@@ -13,7 +14,7 @@ import {
 } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ params, url }) => {
-  const ref = url.searchParams.get('ref') ?? '/register';
+  const ref = safeReturnTo(url.searchParams.get('ref'));
   const txn = await getTransactionForEdit(params.id);
   if (!txn) redirect(303, ref);
   const [payableLink, accounts] = await Promise.all([
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 export const actions: Actions = {
   delete: async ({ params, url }) => {
-    const ref = url.searchParams.get('ref') ?? '/register';
+    const ref = safeReturnTo(url.searchParams.get('ref'));
     const result = await deleteTransaction(params.id);
     if (!result.success) return fail(422, { error: result.error ?? 'Delete failed' });
     redirect(303, ref);

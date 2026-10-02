@@ -1,7 +1,9 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 import { startWatcher } from '#lib/watcher.server.js';
+import { ensureManagedJournalDirectives } from '#lib/hledger/journal.js';
 
 startWatcher().catch(console.error);
+ensureManagedJournalDirectives().catch(console.error);
 
 export const handle: Handle = async ({ event, resolve }) => {
   const origin = event.request.headers.get('origin');

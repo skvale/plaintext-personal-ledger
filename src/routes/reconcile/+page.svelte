@@ -76,7 +76,7 @@
   }
 
   function selectAccount(val: string) {
-    goto(val ? `/reconcile?account=${encodeURIComponent(val)}` : '/reconcile', { replaceState: true });
+    goto(val ? `/reconcile?account=${encodeURIComponent(val)}` : '/reconcile', { replace: true });
   }
 </script>
 

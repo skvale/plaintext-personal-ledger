@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
+  import { refreshAll } from "$app/navigation";
   import { tick } from "svelte";
   import { slide } from "svelte/transition";
   import Combobox from "#lib/components/Combobox.svelte";
@@ -324,7 +324,7 @@
                 </div>
 
                 <div
-                  class="flex items-center gap-2 mb-1 text-xs font-medium text-slate-400 uppercase tracking-wide"
+                  class="flex items-center gap-2 mb-1 text-xs font-medium text-slate-400 tracking-wide"
                 >
                   <span class="flex-1">Account</span>
                   <span class="w-40 text-right">Amount</span>
@@ -783,7 +783,7 @@
                   class="flex items-center justify-center gap-1.5 font-mono text-base font-semibold flex-wrap"
                 >
                   <span
-                    class="text-base uppercase tracking-wide text-slate-100 font-medium"
+                    class="text-base tracking-wide text-slate-100 font-medium"
                     >Debit</span
                   >
                   <AccountTypeBadge type="assets" />
@@ -796,7 +796,7 @@
                   <span class="text-slate-100">+</span>
                   <AccountTypeBadge type="income" />
                   <span
-                    class="text-base uppercase tracking-wide text-slate-100 font-medium"
+                    class="text-base tracking-wide text-slate-100 font-medium"
                     >Credit</span
                   >
                 </div>

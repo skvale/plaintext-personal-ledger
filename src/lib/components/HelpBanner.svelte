@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
 
   let {
     id,
@@ -26,7 +26,7 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ tipKey: `${id}:help` })
     });
-    await invalidateAll();
+    await refreshAll();
   }
 </script>
 

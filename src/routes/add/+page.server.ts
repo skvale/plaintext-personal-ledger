@@ -1,32 +1,13 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getAccountNames, getVendors, appendTransaction, addAccountDeclaration } from '#lib/hledger.server.js';
+import { safeReturnTo } from '#lib/return-to.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const [accounts, vendorRows] = await Promise.all([getAccountNames(), getVendors()]);
   const vendors = vendorRows.map((p) => p.vendor);
   return { accounts, vendors };
 };
-
-const FALLBACK_RETURN = '/register';
-
-/** Accepts only same-origin relative paths, so `from` can never bounce off-site. */
-function safeReturnTo(raw: string | null): string {
-  if (!raw) return FALLBACK_RETURN;
-  // Reject anything absolute or protocol-relative before parsing.
-  if (!raw.startsWith('/') || raw.startsWith('//')) return FALLBACK_RETURN;
-  let parsed: URL;
-  try {
-    parsed = new URL(raw, 'http://local.invalid');
-  } catch {
-    return FALLBACK_RETURN;
-  }
-  if (parsed.origin !== 'http://local.invalid') return FALLBACK_RETURN;
-  const path = parsed.pathname + parsed.search;
-  // Never bounce straight back to the form.
-  if (path === '/add') return FALLBACK_RETURN;
-  return path;
-}
 
 export const actions: Actions = {
   default: async ({ request }) => {
@@ -68,7 +49,7 @@ export const actions: Actions = {
 
     // Only honour a same-origin relative path. Anything else means we don't
     // know where the user came from, so fall back to the register.
-    const from = safeReturnTo(new URL(request.url).searchParams.get('from'));
+    const from = safeReturnTo(new URL(request.url).searchParams.get('from'), '/add');
     redirect(303, from);
   }
 };

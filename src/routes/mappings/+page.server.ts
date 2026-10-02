@@ -5,6 +5,7 @@ import {
   parseRulesFile,
   saveRulesFile,
   renameRulesFile,
+  deleteRulesFile,
   rulesFileExists,
   getAccountNames,
   detectCsvDefaults,

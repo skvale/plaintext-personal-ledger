@@ -27,7 +27,7 @@
   const mm = $derived(data.multiMonth);
 
   function setMonths(n: number) {
-    goto(`/balancesheet?months=${n}`, { replaceState: true, noScroll: true });
+    goto(`/balancesheet?months=${n}`, { replace: true, reset: false });
   }
 
   // Derive table sections from multi-month data

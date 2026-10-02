@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import { writeFile } from 'node:fs/promises';
 import { getSettings, SETTINGS_FILE } from '#lib/hledger.server.js';
 import { mergeSettings } from '#lib/settings.js';
@@ -12,5 +11,5 @@ export const PATCH: RequestHandler = async ({ request }) => {
   const updated = mergeSettings({ ...current, ...patch });
 
   await writeFile(SETTINGS_FILE, JSON.stringify(updated, null, 2) + '\n', 'utf-8');
-  return json({ ok: true });
+  return Response.json({ ok: true });
 };

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { runJson } from "./cache.js";
 import { pickAmount } from "./parsing.js";
-import { getWriteJournal, RECURRING_JOURNAL } from "./journal.js";
+import { getWriteJournal, RECURRING_JOURNAL, runJournalCheck } from "./journal.js";
 import { invalidateCache } from "./cache.js";
 import { execAsync } from "./exec.js";
 import { fmtPosting, fmtAmount } from "./parsing.js";
@@ -90,7 +90,7 @@ export async function saveRecurringRules(
   await writeFile(RECURRING_JOURNAL, header + "\n" + body + "\n", "utf-8");
   try {
     const JOURNAL = await getWriteJournal();
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {
@@ -132,7 +132,7 @@ export async function appendRecurringRule(
 
   try {
     const JOURNAL = await getWriteJournal();
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {
@@ -195,8 +195,7 @@ export async function materializePastDue(
   await writeFile(journalPath, original + entry, "utf-8");
 
   try {
-    const cmd = `hledger -f "${journalPath}" check`;
-    await execAsync(cmd);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {

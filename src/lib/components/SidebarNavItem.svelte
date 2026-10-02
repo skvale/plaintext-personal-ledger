@@ -39,7 +39,7 @@
       <div class="absolute inset-0 mx-1 rounded-md border-2 border-dashed border-blue-300/40 bg-blue-300/5"></div>
     {/if}
   {:else if item.kind === 'section'}
-    <div class="mt-2 px-3 pb-0.5 text-xs font-semibold uppercase tracking-widest text-slate-100 cursor-grab {isDragging.current ? 'invisible' : ''}" {...listeners.current}>{item.label}</div>
+    <div class="mt-2 px-3 pb-0.5 text-xs font-semibold tracking-wide text-slate-100 cursor-grab {isDragging.current ? 'invisible' : ''}" {...listeners.current}>{item.label}</div>
     {#if isDragging.current}
       <div class="absolute inset-0 mx-1 rounded-md border-2 border-dashed border-blue-300/40 bg-blue-300/5"></div>
     {/if}

@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { onMount } from "svelte";
   import {
-    invalidateAll,
+    refreshAll,
     goto,
     beforeNavigate,
     afterNavigate,
@@ -351,7 +351,7 @@
       // A save writes the journal, so this fires mid-submit. Invalidating then
       // would race the action's redirect and strand the user on the form.
       if (isSaveLocked()) return;
-      invalidateAll();
+      refreshAll();
     });
 
     let gDown = false;
@@ -510,7 +510,7 @@
             <div class="divider-gradient mx-3 my-1 w-40"></div>
           {:else if activeNavItem && activeNavItem.kind === "section"}
             <div
-              class="px-3 pb-0.5 text-xs font-semibold uppercase tracking-widest text-slate-100"
+              class="px-3 pb-0.5 text-xs font-semibold tracking-wide text-slate-100"
             >
               {activeNavItem.label}
             </div>

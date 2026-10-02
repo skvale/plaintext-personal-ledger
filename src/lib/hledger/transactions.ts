@@ -2,7 +2,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { nanoid } from "nanoid";
 import { runJson, run, invalidateCache } from "./cache.js";
-import { READ_JOURNAL, MAIN_JOURNAL, getWriteJournal } from "./journal.js";
+import { READ_JOURNAL, MAIN_JOURNAL, getWriteJournal, runJournalCheck } from "./journal.js";
 import {
   pickAmount,
   pickCommodity,
@@ -138,11 +138,27 @@ export async function getTransactions(
       (tx.tpostings ?? []).some((p: any) => postingStartsWith(p, amtNum))
     );
   } else {
-    // Description search first, then account-name search as a fallback.
-    raw = (await runJson<any[]>([...args, `desc:"${queryStr}"`])) ?? [];
-    if (raw.length === 0) {
-      raw = (await runJson<any[]>([...args, `acct:"${queryStr}"`])) ?? [];
-    }
+    // Text search matches a description or an account name, case-insensitively.
+    //
+    // This is done in JS rather than via hledger's `desc:`/`acct:` query terms
+    // because hledger's query syntax is version-fragile: quoting the value
+    // (`desc:"coffee"`) is a literal exact match in hledger 1.52 and returns
+    // nothing, while an unquoted value is parsed as a query — so a description
+    // containing `:` or `not:` changes the match. Filtering the already-cached
+    // `-O json` output is stable across hledger versions and needs no escaping.
+    const needle = queryStr.toLowerCase();
+    raw = (await runJson<any[]>(args)) ?? [];
+    raw = raw.filter(
+      (tx: any) =>
+        String(tx.tdescription ?? "")
+          .toLowerCase()
+          .includes(needle) ||
+        (tx.tpostings ?? []).some((p: any) =>
+          String(p.paccount ?? "")
+            .toLowerCase()
+            .includes(needle),
+        ),
+    );
   }
   raw = raw ?? [];
   const dropN = opts.drop ?? 0;
@@ -285,7 +301,7 @@ export async function addAccountDeclaration(
   lines.splice(insertAt, 0, `account ${name}`);
   await writeFile(JOURNAL, lines.join("\n"), "utf-8");
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await runJournalCheck();
     invalidateCache();
     return { success: true };
   } catch (e: any) {
@@ -347,7 +363,7 @@ export async function appendTransaction(txn: {
   await writeFile(JOURNAL, original + entry, "utf-8");
 
   try {
-    await execAsync(`hledger -f "${JOURNAL}" check`);
+    await runJournalCheck();
   } catch (e: any) {
     // Revert
     await writeFile(JOURNAL, original, "utf-8");
@@ -383,7 +399,7 @@ export async function appendTransaction(txn: {
 export async function checkJournal(): Promise<{ ok: boolean; error?: string }> {
   const JOURNAL = await getWriteJournal();
   try {
-    await execAsync(`hledger check -f "${JOURNAL}"`);
+    await runJournalCheck();
     return { ok: true };
   } catch (e: any) {
     const msg = [e.stderr ?? "", e.stdout ?? ""]
