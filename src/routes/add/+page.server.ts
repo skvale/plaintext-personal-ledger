@@ -8,6 +8,26 @@ export const load: PageServerLoad = async ({ url }) => {
   return { accounts, vendors };
 };
 
+const FALLBACK_RETURN = '/register';
+
+/** Accepts only same-origin relative paths, so `from` can never bounce off-site. */
+function safeReturnTo(raw: string | null): string {
+  if (!raw) return FALLBACK_RETURN;
+  // Reject anything absolute or protocol-relative before parsing.
+  if (!raw.startsWith('/') || raw.startsWith('//')) return FALLBACK_RETURN;
+  let parsed: URL;
+  try {
+    parsed = new URL(raw, 'http://local.invalid');
+  } catch {
+    return FALLBACK_RETURN;
+  }
+  if (parsed.origin !== 'http://local.invalid') return FALLBACK_RETURN;
+  const path = parsed.pathname + parsed.search;
+  // Never bounce straight back to the form.
+  if (path === '/add') return FALLBACK_RETURN;
+  return path;
+}
+
 export const actions: Actions = {
   default: async ({ request }) => {
     const data = await request.formData();
@@ -46,7 +66,9 @@ export const actions: Actions = {
       return fail(422, { error: result.error ?? 'Validation failed', date, vendor, note });
     }
 
-    const from = new URL(request.url).searchParams.get('from') ?? '/register';
+    // Only honour a same-origin relative path. Anything else means we don't
+    // know where the user came from, so fall back to the register.
+    const from = safeReturnTo(new URL(request.url).searchParams.get('from'));
     redirect(303, from);
   }
 };

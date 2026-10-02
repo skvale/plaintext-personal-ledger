@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { applyAction, enhance } from '$app/forms';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
+  import { acquireSaveLock, releaseSaveLock } from '$lib/nav-lock.js';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
   import PostingSortableItem from '$lib/components/PostingSortableItem.svelte';
@@ -21,7 +22,7 @@
         }
       } catch { /* ignore */ }
     }
-    return '/dashboard';
+    return '/register';
   });
 
   const now = new Date();
@@ -125,12 +126,21 @@
   <form method="POST" use:enhance={({ formData, cancel }) => {
       if (submitting) { cancel(); return; }
       submitting = true;
+      acquireSaveLock();
       formData.set('postings', JSON.stringify(postings.map(p => ({ account: p.account, amount: p.amount }))));
       return async ({ result }) => {
         submitting = false;
         if (result.type === 'redirect') {
-          goto((result as { location: string }).location);
+          try {
+            await goto((result as { location: string }).location);
+          } finally {
+            // If the navigation never landed we are still on the form, and the
+            // journal has moved on underneath us — catch up now.
+            releaseSaveLock();
+            if ($page.url.pathname === '/add') await invalidateAll();
+          }
         } else {
+          releaseSaveLock();
           applyAction(result);
         }
       };

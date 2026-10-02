@@ -10,6 +10,7 @@
   } from "$app/navigation";
   import SailboatLogo from "$lib/components/SailboatLogo.svelte";
   import { theme } from "$lib/theme.svelte.js";
+  import { isSaveLocked } from "$lib/nav-lock.js";
   import { Dialog } from "bits-ui";
   import type { SidebarItemConfig } from "$lib/settings.js";
   import {
@@ -339,7 +340,12 @@
     theme.isDark = document.documentElement.classList.contains("dark");
 
     const es = new EventSource("/events");
-    es.addEventListener("journal-changed", () => invalidateAll());
+    es.addEventListener("journal-changed", () => {
+      // A save writes the journal, so this fires mid-submit. Invalidating then
+      // would race the action's redirect and strand the user on the form.
+      if (isSaveLocked()) return;
+      invalidateAll();
+    });
 
     let gDown = false;
     let gTimer: ReturnType<typeof setTimeout>;

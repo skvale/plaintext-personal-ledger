@@ -139,6 +139,8 @@
     for (const p of data.txn.postings) {
       params.append('p', `${p.account}|${p.amount}`);
     }
+    // Mirror editHref: send the user back where they came from after saving.
+    params.set('from', backHref);
     return `/add?${params.toString()}`;
   });
 

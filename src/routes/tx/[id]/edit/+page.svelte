@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
+  import { acquireSaveLock, releaseSaveLock } from '$lib/nav-lock.js';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
   import PostingSortableItem from '$lib/components/PostingSortableItem.svelte';
@@ -119,11 +120,22 @@
         amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
       }))));
       submitting = true;
+      acquireSaveLock();
       return async ({ result, update }) => {
         if (result.type === 'redirect') {
-          await goto((result as { location: string }).location);
+          try {
+            await goto((result as { location: string }).location);
+          } finally {
+            // If the navigation never landed we are still on the form, and the
+            // journal has moved on underneath us — catch up now.
+            releaseSaveLock();
+            if ($page.url.pathname === `/tx/${$page.params.id}/edit`) {
+              await invalidateAll();
+            }
+          }
         } else {
           submitting = false;
+          releaseSaveLock();
           await update();
         }
       };
