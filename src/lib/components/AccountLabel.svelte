@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { accountColor, accountWithoutType } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
+  import { accountColor, accountWithoutType } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
 
   let {
     account,

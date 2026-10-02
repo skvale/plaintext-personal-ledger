@@ -3,14 +3,14 @@
   import { invalidateAll } from "$app/navigation";
   import { tick } from "svelte";
   import { slide } from "svelte/transition";
-  import Combobox from "$lib/components/Combobox.svelte";
-  import DatePicker from "$lib/components/DatePicker.svelte";
-  import SailboatLogo from "$lib/components/SailboatLogo.svelte";
-  import AccountLabel from "$lib/components/AccountLabel.svelte";
-  import Amount from "$lib/components/Amount.svelte";
-  import AccountTypeBadge from "$lib/components/AccountTypeBadge.svelte";
-  import EquationDisplay from "$lib/components/EquationDisplay.svelte";
-  import TransactionExample from "$lib/components/TransactionExample.svelte";
+  import Combobox from "#lib/components/Combobox.svelte";
+  import DatePicker from "#lib/components/DatePicker.svelte";
+  import SailboatLogo from "#lib/components/SailboatLogo.svelte";
+  import AccountLabel from "#lib/components/AccountLabel.svelte";
+  import Amount from "#lib/components/Amount.svelte";
+  import AccountTypeBadge from "#lib/components/AccountTypeBadge.svelte";
+  import EquationDisplay from "#lib/components/EquationDisplay.svelte";
+  import TransactionExample from "#lib/components/TransactionExample.svelte";
 
   let { data, form } = $props();
 

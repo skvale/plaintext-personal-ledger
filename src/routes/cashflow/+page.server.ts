@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getCashFlow } from '$lib/hledger.server.js';
+import { getCashFlow } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const monthsParam = url.searchParams.get('months');

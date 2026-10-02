@@ -1,31 +1,27 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { AlertDialog } from 'bits-ui';
-  import { accountTail, accountColor, accountSortKey } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import AccountLabel from '$lib/components/AccountLabel.svelte';
-  import AccountTypeBadge from '$lib/components/AccountTypeBadge.svelte';
-  import EquationDisplay from '$lib/components/EquationDisplay.svelte';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
-  import FileIcon from '$lib/components/FileIcon.svelte';
-  import FilePreview from '$lib/components/FilePreview.svelte';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import DatePicker from '$lib/components/DatePicker.svelte';
+  import { accountTail, accountColor, accountSortKey } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import AccountLabel from '#lib/components/AccountLabel.svelte';
+  import AccountTypeBadge from '#lib/components/AccountTypeBadge.svelte';
+  import EquationDisplay from '#lib/components/EquationDisplay.svelte';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
+  import FileIcon from '#lib/components/FileIcon.svelte';
+  import FilePreview from '#lib/components/FilePreview.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import DatePicker from '#lib/components/DatePicker.svelte';
   import { invalidateAll } from '$app/navigation';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-
-  const learningBeginner = $derived(
-    $page.data.settings?.learning?.enabled && $page.data.settings?.learning?.level === 'beginner'
-  );
+  const learningBeginner = $derived(page.data.settings?.learning?.enabled && page.data.settings?.learning?.level === 'beginner');
 
   const equationParts = $derived.by(() => {
-    const typeSum = (prefix: string) => postingDetails
-      .filter(p => p.account.startsWith(prefix))
-      .reduce((s, p) => s + p.amount, 0);
+    const typeSum = (prefix: string) => postingDetails.filter((p) => p.account.startsWith(prefix)).reduce((s, p) => s + p.amount, 0);
+
     return {
       assets: typeSum('assets'),
       liabilities: typeSum('liabilities'),
@@ -35,7 +31,7 @@
     };
   });
 
-  const backHref = $derived($page.url.searchParams.get('ref') ?? '/register');
+  const backHref = $derived(page.url.searchParams.get('ref') ?? '/register');
 
   // Extract import source from raw text comment (e.g. "imported from checking.csv")
   const importSource = $derived(data.txn.rawText?.match(/imported from (.+?)(?:,|\s*$)/m)?.[1] ?? '');
@@ -72,7 +68,7 @@
       };
     });
 
-    const hasBalanceAssignment = parsed.some(p => p.isBalanceAssignment);
+    const hasBalanceAssignment = parsed.some((p) => p.isBalanceAssignment);
     const explicitSum = parsed.reduce((s, p) => s + (p.parsedAmount ?? 0), 0);
 
     return parsed.map((p) => {
@@ -109,15 +105,15 @@
     });
   });
 
-  const hasBalanceAssignment = $derived(postingDetails.some(p => p.isBalanceAssignment));
+  const hasBalanceAssignment = $derived(postingDetails.some((p) => p.isBalanceAssignment));
 
-  const totalDebits = $derived(postingDetails.filter(p => p.isDebit).reduce((s, p) => s + p.absAmount, 0));
-  const totalCredits = $derived(postingDetails.filter(p => !p.isDebit).reduce((s, p) => s + p.absAmount, 0));
+  const totalDebits = $derived(postingDetails.filter((p) => p.isDebit).reduce((s, p) => s + p.absAmount, 0));
+  const totalCredits = $derived(postingDetails.filter((p) => !p.isDebit).reduce((s, p) => s + p.absAmount, 0));
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(n, displayFmt);
     if (showSymbol) return full;
@@ -127,7 +123,7 @@
   // Edit link preserves ref param
   const editHref = $derived(() => {
     const id = data.txn.txid ?? data.txn.tindex;
-    const ref = $page.url.searchParams.get('ref') ?? '/register';
+    const ref = page.url.searchParams.get('ref') ?? '/register';
     return `/tx/${id}/edit?ref=${encodeURIComponent(ref)}`;
   });
 
@@ -157,7 +153,7 @@
   const isPayment = $derived(payableLink?.type === 'payment');
   const billAmount = $derived.by(() => {
     if (!payableLink) return 0;
-    const pp = postingDetails.find(p => p.account.startsWith('liabilities:payable'));
+    const pp = postingDetails.find((p) => p.account.startsWith('liabilities:payable'));
     return pp ? pp.absAmount : 0;
   });
   const isPaid = $derived(payableLink?.type === 'bill' && (payableLink.related?.length ?? 0) > 0);
@@ -186,10 +182,10 @@
 
     // First line is the header
     const header = lines[0];
-    const postingLines = lines.slice(1).filter(l => l.trim());
+    const postingLines = lines.slice(1).filter((l) => l.trim());
 
     // Parse postings: separate account from amount
-    const parsed = postingLines.map(line => {
+    const parsed = postingLines.map((line) => {
       const trimmed = line.replace(/^[\t ]+/, '');
       const status = trimmed.match(/^[*!]\s*/)?.[0] ?? '';
       const rest = trimmed.slice(status.length);
@@ -201,11 +197,11 @@
     });
 
     // Find the longest account name to align amounts
-    const maxAcct = Math.max(...parsed.map(p => (p.status + p.account).length), 40);
+    const maxAcct = Math.max(...parsed.map((p) => (p.status + p.account).length), 40);
 
-    const formatted = parsed.map(p => {
+    const formatted = parsed.map((p) => {
       const left = p.status + p.account;
-      const pad = ' '.repeat(Math.max(2, maxAcct - left.length + 4));
+      const pad = (' ').repeat(Math.max(2, maxAcct - left.length + 4));
       return { left: '    ' + left, pad, amount: p.amount };
     });
 
@@ -221,16 +217,48 @@
 <div class="mb-4 flex items-center justify-between">
   <a href={backHref} class="text-sm text-slate-100 hover:text-slate-100 transition-colors">← Back</a>
   <div class="flex items-center gap-3">
-    <a
-      href={editHref()}
-      class="btn-edit"
-    ><svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>Edit</a>
-    <a
-      href={duplicateHref()}
-      class="btn-edit"
-    ><svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplicate</a>
+    <a href={editHref()} class="btn-edit">
+      <svg
+        class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
+        ></path>
+
+        <path d="m15 5 4 4"></path>
+      </svg>
+
+      Edit
+    </a>
+
+    <a href={duplicateHref()} class="btn-edit">
+      <svg
+        class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+
+        <path
+          d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+        ></path>
+      </svg>
+
+      Duplicate
+    </a>
+
     <button
-      onclick={() => (showDeleteConfirm = true)}
+      onclick={() => showDeleteConfirm = true}
       class="btn-delete"
     >Delete</button>
   </div>
@@ -279,7 +307,12 @@
               <span class="text-slate-100 whitespace-pre">{p.rawAmt}</span>
               <span class="text-slate-100/50 ml-2">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
             {:else}
-              <span class="{p.amount >= 0 ? 'text-slate-100' : 'text-slate-100'}">{p.amount < 0 ? '−' : ''}<Amount precise value={p.absAmount} /></span>
+              <span
+                class={p.amount >= 0 ? 'text-slate-100' : 'text-slate-100'}
+              >
+                {p.amount < 0 ? '−' : ''}
+                <Amount precise value={p.absAmount} />
+              </span>
             {/if}
             {#if p.assertion && !p.isBalanceAssignment}
               <span class="ml-1 text-slate-100/60">= {#if p.assertionNum != null}<Amount precise value={p.assertionNum} />{:else}{p.assertion}{/if}</span>
@@ -333,11 +366,20 @@
                 onclick={() => { showPayForm = true; payDate = new Date().toISOString().slice(0, 10); payAccount = ''; payError = ''; }}
                 class="btn-primary mt-2"
               >
-                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                <svg
+                  class="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ><path d="M12 5v14M5 12h14"></path></svg>
+
                 Pay this bill
               </button>
             {:else}
-              {@const payableAccount = data.txn.postings.find(p => p.account.startsWith('liabilities:payable'))?.account ?? 'liabilities:payable'}
+              {@const payableAccount = data.txn.postings.find((p) => p.account.startsWith('liabilities:payable'))?.account ?? 'liabilities:payable'}
               {@const amtStr = fmt(billAmount)}
               <form
                 method="POST"
@@ -423,10 +465,9 @@
         {@const fileName = data.txn.docPath.split('/').pop() ?? data.txn.docPath}
         {@const fileUrl = `/docs/file?p=${encodeURIComponent(data.txn.docPath)}`}
         <div class="flex items-center gap-3">
-          <FileIcon {ext} size="sm" />
-          <FilePreview src={fileUrl} name={fileName} {ext}>
-            <span class="font-mono text-sm text-slate-100">{fileName}</span>
-          </FilePreview>
+          <FileIcon ext={ext} size="sm" />
+          <FilePreview src={fileUrl} name={fileName} ext={ext}><span class="font-mono text-sm text-slate-100">{fileName}</span></FilePreview>
+
           <a
             href={ext === 'csv' ? `/docs/csv?p=${encodeURIComponent(data.txn.docPath)}` : fileUrl}
             target={['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(ext) ? '_blank' : undefined}
@@ -470,8 +511,25 @@
             class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-100 transition-colors hover:border-slate-300 dark:border-slate-300 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 {attachDragging ? '!border-blue-300 !bg-blue-50 dark:!bg-blue-300/10' : ''}"
             onclick={() => document.getElementById('attach-file')?.click()}
           >
-            <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <span>{attachFileName ? attachFileName : attachDragging ? 'Drop to attach' : 'Choose file or drag here'}</span>
+            <svg
+              class="h-4 w-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"
+              ></path>
+            </svg>
+
+            <span>
+              {attachFileName
+                ? attachFileName
+                : attachDragging ? 'Drop to attach' : 'Choose file or drag here'}
+            </span>
           </button>
           <div class="flex gap-2">
             <button type="submit" class="btn-primary">Attach</button>
@@ -484,10 +542,23 @@
         {/if}
       {:else}
         <button
-          onclick={() => (showAttach = true)}
+          onclick={() => showAttach = true}
           class="flex items-center gap-2 text-sm text-slate-100 transition-colors hover:text-slate-100"
         >
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"
+            ></path>
+          </svg>
+
           Attach file
         </button>
       {/if}
@@ -502,12 +573,15 @@
         <a href="/settings#learning" class="text-sm text-blue-600/70 dark:text-blue-500/70 underline underline-offset-2 hover:text-blue-900 dark:hover:text-blue-500">Learning Mode</a>
       </div>
       <EquationDisplay values={{
-        assets: equationParts.assets,
-        liabilities: -equationParts.liabilities,
-        equity: -equationParts.equity,
-        income: -equationParts.income,
-        expenses: equationParts.expenses,
-      }} {fmt} />
+          assets: equationParts.assets,
+          liabilities: -equationParts.liabilities,
+          equity: -equationParts.equity,
+          income: -equationParts.income,
+          expenses: equationParts.expenses
+        }}
+        fmt={fmt}
+      />
+
       <p class="text-sm text-slate-100 leading-relaxed">
         {#if equationParts.equity !== 0}
           Opening balances — this is the starting snapshot of your accounts. The Equity account is just the balancing entry that makes the numbers work.
@@ -542,8 +616,18 @@
   <!-- Raw journal text -->
   {#if data.txn.rawText}
     <details class="group animate-in animate-in-5">
-      <summary class="cursor-pointer list-none text-sm text-slate-100 hover:text-slate-100 transition-colors flex items-center gap-1.5">
-        <svg class="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+      <summary
+        class="cursor-pointer list-none text-sm text-slate-100 hover:text-slate-100 transition-colors flex items-center gap-1.5"
+      >
+        <svg
+          class="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        ><path d="m9 18 6-6-6-6"></path></svg>
+
         <span class="group-open:hidden">Show plain text journal</span>
         <span class="hidden group-open:inline">Hide plain text journal</span>
       </summary>
@@ -591,7 +675,22 @@
           onclick={() => { rawDraft = data.txn.rawText ?? ''; editingRaw = true; editError = ''; }}
           class="mt-2 text-sm text-slate-100 hover:text-slate-100 transition-colors flex items-center gap-1.5"
         >
-          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
+            ></path>
+
+            <path d="m15 5 4 4"></path>
+          </svg>
+
           Edit
         </button>
       {/if}

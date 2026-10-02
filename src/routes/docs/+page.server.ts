@@ -20,7 +20,7 @@ import {
   saveRulesFile,
   deleteDocument,
   type DocFolder
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 import { join, resolve } from 'node:path';
 
 function detectGaps(folders: DocFolder[]): string[] {

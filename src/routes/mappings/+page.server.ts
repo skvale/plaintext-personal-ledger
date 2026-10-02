@@ -12,9 +12,9 @@ import {
   generateRulesFromCsv,
   generateRulesFromCsvContent,
   STATEMENTS_DIR,
-} from '$lib/hledger.server.js';
-import { loadKeywordIndex, saveKeywordIndex, suggestAccount } from '$lib/keywords.js';
-import type { ParsedRulesFile } from '$lib/hledger/index.js';
+} from '#lib/hledger.server.js';
+import { loadKeywordIndex, saveKeywordIndex, suggestAccount } from '#lib/keywords.js';
+import type { ParsedRulesFile } from '#lib/hledger/index.js';
 import { resolve, join } from 'node:path';
 import { readdir } from 'node:fs/promises';
 import type { Actions, PageServerLoad } from './$types.js';

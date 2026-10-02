@@ -1,12 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { Tooltip } from 'bits-ui';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import Sparkline from '$lib/components/Sparkline.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import Sparkline from '#lib/components/Sparkline.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data } = $props();
 
@@ -23,10 +23,10 @@
     setTimeout(() => { el.scrollLeft = el.scrollWidth; }, 150);
   });
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(n, displayFmt);
     if (showSymbol) return full;
@@ -108,42 +108,51 @@
           </tr>
         </thead>
         <Tooltip.Provider delayDuration={300}>
-        <tbody>
-          {#each filteredMm.vendors as p}
-            <tr
-              class="group border-b border-black/[0.08] dark:border-white/[0.06] transition-colors hover:bg-slate-800/50"
-            >
-              <Tooltip.Root>
+          <tbody>
+            {#each filteredMm.vendors as p}
+              <tr
+                class="group border-b border-black/[0.08] dark:border-white/[0.06] transition-colors hover:bg-slate-800/50"
+              >
+                <Tooltip.Root>
                 <Tooltip.Trigger class="px-4 py-2.5 text-left sticky left-0 bg-slate-900 group-hover:bg-slate-800/50 max-w-[350px] w-[350px] overflow-hidden">
-                  <a
-                    href="/register?q={encodeURIComponent(p.vendor)}&from="
-                    class="text-slate-100 hover:text-blue-500 group-hover:underline underline-offset-2 transition-colors block truncate"
-                  >{p.vendor}</a>
-                </Tooltip.Trigger>
-                {#if p.amounts.some((a: number) => a > 0)}
-                  <Tooltip.Portal>
-                    <Tooltip.Content
-                      side="right"
-                      sideOffset={4}
-                      class="z-50 rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 shadow-xl"
-                    >
-                      <p class="mb-1 text-xs text-slate-100 whitespace-nowrap">{p.vendor}</p>
-                      <Sparkline values={p.amounts} labels={filteredMm?.months.map(m => fmtMonth(m).slice(0, 3))} width={180} height={56} showAxis />
-                    </Tooltip.Content>
-                  </Tooltip.Portal>
-                {/if}
-              </Tooltip.Root>
-              {#each p.amounts as amount}
+                    <a
+                      href="/register?q={encodeURIComponent(p.vendor)}&from="
+                      class="text-slate-100 hover:text-blue-500 group-hover:underline underline-offset-2 transition-colors block truncate"
+                    >{p.vendor}</a>
+                  </Tooltip.Trigger>
+                  {#if p.amounts.some((a: number) => a > 0)}
+                    <Tooltip.Portal>
+                      <Tooltip.Content
+                        side="right"
+                        sideOffset={4}
+                        class="z-50 rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 shadow-xl"
+                      >
+                        <p
+                          class="mb-1 text-xs text-slate-100 whitespace-nowrap"
+                        >{p.vendor}</p>
+
+                        <Sparkline
+                          values={p.amounts}
+                          labels={filteredMm?.months.map((m) => fmtMonth(m).slice(0, 3))}
+                          width={180}
+                          height={56}
+                          showAxis
+                        />
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  {/if}
+                </Tooltip.Root>
+                {#each p.amounts as amount}
                 <td class="px-4 py-2.5 text-right font-mono text-sm tabular-nums whitespace-nowrap {amount > 0 ? 'text-rose-400' : 'text-slate-100'}">
                   {#if amount > 0}<Amount value={amount} />{:else}—{/if}
-                </td>
-              {/each}
+                  </td>
+                {/each}
               <td class="px-4 py-2.5 text-right font-mono text-sm font-semibold tabular-nums whitespace-nowrap text-rose-400">
                 <Amount value={p.total} />
               </td>
-            </tr>
-          {/each}
-        </tbody>
+              </tr>
+            {/each}
+          </tbody>
         </Tooltip.Provider>
       </table>
     </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
 
   let { data, form } = $props();
 

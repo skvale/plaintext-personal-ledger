@@ -1,23 +1,26 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import Chart from '$lib/Chart.svelte';
+  import Chart from '#lib/Chart.svelte';
   import { goto } from '$app/navigation';
-  import { theme } from '$lib/theme.svelte.js';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import MonthlyReportTable from '$lib/components/MonthlyReportTable.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
+  import { theme } from '#lib/theme.svelte.js';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import MonthlyReportTable from '#lib/components/MonthlyReportTable.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
 
   const _props: { data: PageData } = $props();
   const data = $derived(_props.data);
   let months = $state(0);
-  $effect(() => { months = data.months; });
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  $effect(() => {
+    months = data.months;
+  });
+
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number, signed = false) {
     const full = formatAmount(Math.abs(n), displayFmt);
     const formatted = showSymbol ? full : full.replace(displayFmt.symbol, '');
@@ -37,7 +40,7 @@
   function accountChartColor(name: string): string {
     if (!ACCOUNT_COLORS[name]) {
       let hash = 0;
-      for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+      for (let i = 0; i < name.length; i++) hash = (hash << 5) - hash + name.charCodeAt(i) | 0;
       ACCOUNT_COLORS[name] = PALETTE[Math.abs(hash) % PALETTE.length];
     }
     return ACCOUNT_COLORS[name];
@@ -48,8 +51,11 @@
 
   // Leaf accounts only for chart (exclude parents whose children are also present)
   const allAccounts = $derived.by(() => {
-    const names = [...new Set(monthly.flatMap((m) => m.accounts.map((a) => a.name)))].sort();
-    return names.filter(n => !names.some(other => other !== n && other.startsWith(n + ':')));
+    const names = [
+      ...new Set(monthly.flatMap((m) => m.accounts.map((a) => a.name)))
+    ].sort();
+
+    return names.filter((n) => !names.some((other) => other !== n && other.startsWith(n + ':')));
   });
 
   const chartConfig = $derived({
@@ -120,12 +126,28 @@
 </script>
 
 <LearningBanner id="cashflow" title="Money in & out">
-  Cash flow shows how your bank and cash balances changed each month. Green means money came in, red means it went out.
-  If checking shows <strong>+$2,000</strong>, your checking account grew by that much. The <strong>Net</strong> row tells you
-  whether your total cash position grew or shrank that month.
-  <br /><br />
-  Transfers between your own accounts (e.g. checking &rarr; investments) won't appear in Profit &amp; Loss or change your Balance Sheet,
-  but they show up here. If you mostly care about income vs expenses or net worth, check <a href="/income" class="underline underline-offset-2">P&amp;L</a> and <a href="/balancesheet" class="underline underline-offset-2">Balance Sheet</a> instead.
+  Cash flow shows how your bank and cash balances changed each month. Green means money came in, red means it went out. If checking shows 
+  <strong>+$2,000</strong>
+  , your checking account grew by that much. The 
+  <strong>Net</strong>
+  row tells you whether your total cash position grew or shrank that month. 
+  <br />
+  <br />
+  Transfers between your own accounts (e.g. checking → investments) won't appear in Profit & Loss or change your Balance Sheet, but they show up here. If you mostly care about income vs expenses or net worth, check 
+
+  <a
+    href="/income"
+    class="underline underline-offset-2"
+  >P&L</a>
+
+  and 
+
+  <a
+    href="/balancesheet"
+    class="underline underline-offset-2"
+  >Balance Sheet</a>
+
+  instead.
 </LearningBanner>
 
 <div class="mb-6 flex items-center justify-between">

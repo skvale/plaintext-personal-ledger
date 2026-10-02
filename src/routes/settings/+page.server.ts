@@ -1,8 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fail } from '@sveltejs/kit';
-import { SETTINGS_FILE, getSettings } from '$lib/hledger.server.js';
+import { SETTINGS_FILE, getSettings } from '#lib/hledger.server.js';
 import type { Actions, PageServerLoad } from './$types.js';
-import type { Settings, SidebarItemConfig } from '$lib/settings.js';
+import type { Settings, SidebarItemConfig } from '#lib/settings.js';
 
 export const load: PageServerLoad = async () => {
   const settings = await getSettings();

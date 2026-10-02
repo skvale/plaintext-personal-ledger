@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useSortable } from '@dnd-kit-svelte/sortable';
   import { CSS, styleObjectToString } from '@dnd-kit-svelte/utilities';
-  import Combobox from '$lib/components/Combobox.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
 
   let {
     id,

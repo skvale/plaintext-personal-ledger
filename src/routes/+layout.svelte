@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { page } from "$app/stores";
+  import { page } from '$app/state';
   import { onMount } from "svelte";
   import {
     invalidateAll,
@@ -8,11 +8,11 @@
     beforeNavigate,
     afterNavigate,
   } from "$app/navigation";
-  import SailboatLogo from "$lib/components/SailboatLogo.svelte";
-  import { theme } from "$lib/theme.svelte.js";
-  import { isSaveLocked } from "$lib/nav-lock.js";
+  import SailboatLogo from "#lib/components/SailboatLogo.svelte";
+  import { theme } from "#lib/theme.svelte.js";
+  import { isSaveLocked } from "#lib/nav-lock.js";
   import { Dialog } from "bits-ui";
-  import type { SidebarItemConfig } from "$lib/settings.js";
+  import type { SidebarItemConfig } from "#lib/settings.js";
   import {
     DndContext,
     DragOverlay,
@@ -20,7 +20,7 @@
     type DragStartEvent,
   } from "@dnd-kit-svelte/core";
   import { SortableContext, arrayMove } from "@dnd-kit-svelte/sortable";
-  import SidebarNavItem from "$lib/components/SidebarNavItem.svelte";
+  import SidebarNavItem from "#lib/components/SidebarNavItem.svelte";
 
   let { children, data } = $props();
 
@@ -72,10 +72,16 @@
   };
 
   // Resolved nav items from settings
-  type ResolvedNavItem =
-    | { kind: "link"; href: string; label: string; icon: string; id: string }
-    | { kind: "divider" }
-    | { kind: "section"; label: string };
+  type ResolvedNavItem = 
+    { 
+      kind: "link";
+      href: string;
+      label: string;
+      icon: string;
+      id: string
+     } |
+    { kind: "divider" } |
+    { kind: "section"; label: string };
 
   function resolveNav(items: SidebarItemConfig[]): ResolvedNavItem[] {
     return items.flatMap((item): ResolvedNavItem[] => {
@@ -110,18 +116,16 @@
   }
 
   // Keyboard navigation — derived from NAV_REGISTRY key bindings
-  const routeMap: Record<string, string> = Object.fromEntries(
-    Object.values(NAV_REGISTRY)
-      .filter((item) => item.key)
-      .map((item) => [item.key!.split(" ")[1], item.href]),
-  );
+  const routeMap: Record<string, string> = Object.fromEntries(Object.values(NAV_REGISTRY).filter((item) => item.key).map((item) => [(item.key!).split(" ")[1], item.href]));
 
   let contentEl = $state<HTMLDivElement | undefined>(undefined);
 
   // Save scroll positions per URL so back navigation restores them
   const scrollPositions = new Map<string, number>();
 
-  beforeNavigate(({ from }) => {
+  beforeNavigate(({ from, shallow }) => {
+    if (shallow) return;
+
     if (from?.url && contentEl) {
       scrollPositions.set(
         from.url.pathname + from.url.search,
@@ -131,13 +135,16 @@
   });
 
   let prevPathname = "";
-  afterNavigate(({ from, type }) => {
+
+  afterNavigate(({ from, type, shallow }) => {
+    if (shallow) return;
+
     showAllGlossary = false;
     if (!contentEl) return;
-    const key = $page.url.pathname + $page.url.search;
+    const key = page.url.pathname + page.url.search;
     const saved = scrollPositions.get(key);
     // Don't scroll if only query params changed (e.g. month selector)
-    const samePage = from?.url.pathname === $page.url.pathname;
+    const samePage = from?.url.pathname === page.url.pathname;
     if ((type === "popstate" || type === "link") && saved !== undefined) {
       contentEl.scrollTo({ top: saved });
       scrollPositions.delete(key);
@@ -182,7 +189,7 @@
   let activeNavId = $state<string | null>(null);
   const activeNavItem = $derived(
     activeNavId
-      ? navItems[dndItems.findIndex((d) => d.id === activeNavId)]
+    ? navItems[dndItems.findIndex((d) => d.id === activeNavId)]
       : null,
   );
 
@@ -316,7 +323,7 @@
   };
 
   const filteredGlossary = $derived(() => {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     // Match exact or prefix (for /tx/123 etc.)
     const terms =
       pageTerms[path] ??
@@ -435,7 +442,7 @@
     class="fixed inset-0 z-40 bg-black/60 md:hidden"
     role="button"
     tabindex="-1"
-    onclick={() => (sidebarOpen = false)}
+    onclick={() => sidebarOpen = false}
     onkeydown={(e) => e.key === "Enter" && (sidebarOpen = false)}
   ></div>
 {/if}
@@ -450,7 +457,7 @@
     <div class="flex items-center gap-2.5 border-b border-slate-400 px-4 py-4">
       <SailboatLogo withText class="h-10 shrink-0" />
       <button
-        onclick={() => (sidebarOpen = false)}
+        onclick={() => sidebarOpen = false}
         class="btn-close ml-auto text-base md:hidden"
         aria-label="Close menu">×</button
       >
@@ -460,9 +467,9 @@
     <div class="border-b border-slate-400 p-3">
       <a
         href="/add"
-        onclick={() => (sidebarOpen = false)}
+        onclick={() => sidebarOpen = false}
         class="cta-glow flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors
-          {$page.url.pathname === '/add'
+          {page.url.pathname === '/add'
           ? 'bg-blue-400 text-white'
           : 'bg-blue-300/20 text-blue-400 hover:bg-blue-300/30'}"
       >
@@ -484,7 +491,7 @@
                 id={dndItem.id}
                 item={resolved}
                 uncategorizedCount={data.uncategorizedCount}
-                onsidebarclose={() => (sidebarOpen = false)}
+                onsidebarclose={() => sidebarOpen = false}
               />
             {/if}
           {/each}
@@ -513,9 +520,9 @@
       <!-- Settings always at bottom of nav -->
       <a
         href="/settings"
-        onclick={() => (sidebarOpen = false)}
+        onclick={() => sidebarOpen = false}
         class="mt-auto flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors
-          {$page.url.pathname === '/settings'
+          {page.url.pathname === '/settings'
           ? 'bg-blue-400/10 text-blue-400'
           : 'text-slate-100 hover:bg-slate-800 hover:text-slate-100'}"
       >
@@ -552,7 +559,7 @@
       style="border-top: 1px solid transparent; border-image: linear-gradient(to right, transparent, var(--color-slate-700), transparent) 1;"
     >
       <button
-        onclick={() => (showHelp = true)}
+        onclick={() => showHelp = true}
         class="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-slate-100 transition-colors hover:text-slate-100"
       >
         <span>⌨</span> Keyboard shortcuts
@@ -572,7 +579,7 @@
     >
       <!-- Hamburger (mobile) -->
       <button
-        onclick={() => (sidebarOpen = true)}
+        onclick={() => sidebarOpen = true}
         class="flex h-8 w-8 items-center justify-center rounded-md text-slate-100 hover:bg-slate-800 hover:text-slate-100 md:hidden"
         aria-label="Open menu"
       >
@@ -587,7 +594,7 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             d="M4 6h16M4 12h16M4 18h16"
-          />
+          ></path>
         </svg>
       </button>
 
@@ -612,7 +619,7 @@
         <!-- Glossary toggle (only when learning mode is on) -->
         {#if learningEnabled}
           <button
-            onclick={() => (showGlossary = !showGlossary)}
+            onclick={() => showGlossary = !showGlossary}
             title="Accounting glossary (g g)"
             class="flex items-center gap-1.5 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-sm font-medium text-blue-400 transition-colors hover:border-blue-400/50 hover:text-blue-400"
           >
@@ -624,10 +631,12 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              ><circle cx="12" cy="12" r="10" /><path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-              /><line x1="12" y1="17" x2="12.01" y2="17" /></svg
             >
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+
             Glossary
           </button>
         {/if}
@@ -716,7 +725,7 @@
         {#each navShortcutItems as item}
           <a
             href={item.href}
-            onclick={() => (showHelp = false)}
+            onclick={() => showHelp = false}
             class="flex items-center justify-between gap-4 rounded-md px-2 py-1.5 transition-colors hover:bg-slate-800"
           >
             <span class="text-slate-100">{item.label}</span>
@@ -780,10 +789,12 @@
             showAllGlossary = !showAllGlossary;
           }}
           class="mt-4 w-full text-center text-sm text-slate-100 hover:text-slate-100 transition-colors"
-          >{showAllGlossary
-            ? "Show fewer"
-            : `Show all ${glossaryTerms.length} terms`}</button
         >
+          {showAllGlossary
+            ? "Show fewer"
+            : `Show all ${glossaryTerms.length} terms`}
+        </button>
+
         {#if showAllGlossary}
           <div class="mt-4 space-y-4">
             {#each glossaryTerms.filter((g) => !filteredGlossary().includes(g)) as { term, def }}

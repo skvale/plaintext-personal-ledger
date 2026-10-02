@@ -1,12 +1,12 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { UncategorizedTxn } from '$lib/types.js';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import Amount from '$lib/components/Amount.svelte';
+  import type { UncategorizedTxn } from '#lib/types.js';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data } = $props();
 
@@ -70,10 +70,10 @@
     };
   }
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(n, displayFmt);
     if (showSymbol) return full;
@@ -98,10 +98,10 @@
   let rulePatterns = $state<Record<number, string>>({});
 
   function guessRulesFile(otherAccount: string): string {
-    if (/checking/i.test(otherAccount)) {
+    if ((/checking/i).test(otherAccount)) {
       return data.rulesFiles.find((f: string) => f.includes('checking')) ?? data.rulesFiles[0] ?? '';
     }
-    if (/credit.card/i.test(otherAccount)) {
+    if ((/credit.card/i).test(otherAccount)) {
       return data.rulesFiles.find((f: string) => f.includes('credit')) ?? data.rulesFiles[0] ?? '';
     }
     return data.rulesFiles[0] ?? '';
@@ -184,7 +184,7 @@
         </form>
         <button
           type="button"
-          onclick={() => (pendingBulk = null)}
+          onclick={() => pendingBulk = null}
           class="rounded-md px-3 py-1.5 text-sm text-slate-100 hover:text-slate-100 transition-colors"
         >
           Dismiss

@@ -5,7 +5,7 @@ import {
   saveBudgetEntries,
   getBudgetStatus,
   getAccountNames
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const period = url.searchParams.get('period') ?? 'thismonth';

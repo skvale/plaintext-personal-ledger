@@ -7,7 +7,7 @@ import {
   getCommitDiff,
   gitCommit,
   sortJournal
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const commitHash = url.searchParams.get('commit') ?? null;

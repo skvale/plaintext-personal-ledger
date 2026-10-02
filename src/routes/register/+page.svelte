@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
   import { goto } from '$app/navigation';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import DatePicker from '$lib/components/DatePicker.svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import PeriodStepper from '$lib/components/PeriodStepper.svelte';
-  import { accountColor, accountDotClass, accountSortKey, amountColor } from '$lib/account-colors.js';
-  import AccountLabel from '$lib/components/AccountLabel.svelte';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import DatePicker from '#lib/components/DatePicker.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import PeriodStepper from '#lib/components/PeriodStepper.svelte';
+  import { accountColor, accountDotClass, accountSortKey, amountColor } from '#lib/account-colors.js';
+  import AccountLabel from '#lib/components/AccountLabel.svelte';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -17,7 +17,7 @@
   let query = $state<string>(data.query);
   let from = $state<string>(data.from);
   let to = $state<string>(data.to);
-  let currentPage = $state(Number($page.url.searchParams.get('page')) || 1);
+  let currentPage = $state(Number(page.url.searchParams.get('page')) || 1);
   let searchFocused = $state(false);
 
   $effect(() => {
@@ -27,7 +27,7 @@
     if (!searchFocused) query = data.query;
     from = data.from;
     to = data.to;
-    currentPage = Number($page.url.searchParams.get('page')) || 1;
+    currentPage = Number(page.url.searchParams.get('page')) || 1;
   });
   const pageSize = 100;
 
@@ -43,9 +43,9 @@
     // If the query matches an account name, use the account filter instead.
     // Skip pure numbers: those are amount searches, and auto-converting them
     // to an account hijacks the query (an account like "…2204" would eat "22").
-    if (query && !account && !/^[+-]?[\d,]+(\.\d+)?$/.test(query)) {
+    if (query && !account && !(/^[+-]?[\d,]+(\.\d+)?$/).test(query)) {
       const q = query.toLowerCase();
-      const match = data.accounts.find(a => a.toLowerCase().includes(q));
+      const match = data.accounts.find((a) => a.toLowerCase().includes(q));
       if (match) {
         account = match;
         query = '';
@@ -72,9 +72,10 @@
   }
 
   function goToPage(p: number) {
-    const url = new URL($page.url);
-    if (p <= 1) url.searchParams.delete('page');
-    else url.searchParams.set('page', String(p));
+    const url = new URL(page.url);
+
+    if (p <= 1) url.searchParams.delete('page'); else url.searchParams.set('page', String(p));
+
     goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
   }
 
@@ -173,9 +174,11 @@
   function debounceSearch() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      // Only apply if we're still on the register page
-      if ($page.url.pathname === '/register') applyFilters(true);
-    }, 500);
+        // Only apply if we're still on the register page
+        if (page.url.pathname === '/register') applyFilters(true);
+      },
+      500
+    );
   }
 
   // For expenses: sum of matching postings. For assets/liabilities: current balance.
@@ -186,8 +189,8 @@
   const filteredTotal = $derived(
     data.transactions.reduce((sum, txn) => {
       const matchingPostings = account
-        ? txn.postings.filter(p => p.account === account || p.account.startsWith(account + ':'))
-        : txn.postings.filter(p => p.account.startsWith('expenses'));
+        ? txn.postings.filter((p) => p.account === account || p.account.startsWith(account + ':'))
+        : txn.postings.filter((p) => p.account.startsWith('expenses'));
       return sum + matchingPostings.reduce((s, p) => s + p.amount, 0);
     }, 0)
   );
@@ -199,10 +202,10 @@
       : 0
   );
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
 
   // Detect if filtered account is an investment/stock account
   const isInvestmentAccount = $derived(account?.startsWith('assets:investments:') ?? false);
@@ -248,19 +251,15 @@
   }
 
   // Pick the most meaningful posting to surface in table view
-  function primaryPosting(txn: import('$lib/types.js').Transaction) {
+  function primaryPosting(txn: import('#lib/types.js').Transaction) {
     const posts = account?.startsWith('equity')
       ? txn.postings
-      : txn.postings.filter(p => !p.account.startsWith('equity'));
-    const nonZero = posts.filter(p => p.amount !== 0);
+      : txn.postings.filter((p) => !p.account.startsWith('equity'));
+    const nonZero = posts.filter((p) => p.amount !== 0);
     const pool = nonZero.length > 0 ? nonZero : posts;
-    return (
-      pool.find(p => p.account.startsWith('expenses')) ??
-      pool.find(p => p.account.startsWith('income')) ??
-      pool[0]
-    );
-  }
 
+    return pool.find((p) => p.account.startsWith('expenses')) ?? pool.find((p) => p.account.startsWith('income')) ?? pool[0];
+  }
 </script>
 
 <LearningBanner id="register" title="Your transactions">
@@ -285,14 +284,18 @@
     {/if}
   </div>
   <div class="flex items-center gap-2">
-    <div class="{periodMode === 'all' ? 'invisible' : ''}">
-      <PeriodStepper label={periodLabel} onprev={() => navigatePeriod(-1)} onnext={() => navigatePeriod(1)} />
+    <div class={periodMode === 'all' ? 'invisible' : ''}>
+      <PeriodStepper
+        label={periodLabel}
+        onprev={() => navigatePeriod(-1)}
+        onnext={() => navigatePeriod(1)}
+      />
     </div>
     <div class="flex items-center gap-1">
       {#each [['month','Month'],['year','Year'],['all','All']] as [mode, label]}
         <button
           onclick={() => setPeriodMode(mode as PeriodMode)}
-          class="{periodMode === mode ? 'btn-pill-active' : 'btn-pill'}"
+          class={periodMode === mode ? 'btn-pill-active' : 'btn-pill'}
         >{label}</button>
       {/each}
     </div>
@@ -314,9 +317,14 @@
       type="search"
       placeholder="Search…"
       bind:value={query}
-      onfocus={() => (searchFocused = true)}
-      onblur={() => (searchFocused = false)}
-      onkeydown={(e) => { if (e.key === 'Enter') { clearTimeout(debounceTimer); applyFilters(); } }}
+      onfocus={() => searchFocused = true}
+      onblur={() => searchFocused = false}
+      onkeydown={(e) => {
+        if (e.key === 'Enter') {
+          clearTimeout(debounceTimer);
+          applyFilters();
+        }
+      }}
       oninput={() => debounceSearch()}
     />
   </div>
@@ -385,7 +393,7 @@
     </div>
     <!-- Rows -->
     {#each paginated as txn}
-      {@const isOpening = /opening.balance/i.test(txn.description)}
+      {@const isOpening = (/opening.balance/i).test(txn.description)}
       {@const docPath = txn.tindex !== undefined ? data.docsByTindex[txn.tindex] : undefined}
       {@const pipeIdx = txn.description.indexOf('|')}
       {@const vendor = pipeIdx >= 0 ? txn.description.slice(0, pipeIdx).trim() : txn.description}
@@ -393,11 +401,19 @@
       {@const primary = primaryPosting(txn)}
       {@const vis = account?.startsWith('equity')
         ? txn.postings
-        : txn.postings.filter(p => !p.account.startsWith('equity'))}
-      {@const tblSorted = vis.length >= 2 ? [...vis].sort((a, b) => accountSortKey(a.account) - accountSortKey(b.account)) : []}
+        : txn.postings.filter((p) => !p.account.startsWith('equity'))}
+
+      {@const tblSorted = vis.length >= 2
+        ? [...vis].sort((a, b) => accountSortKey(a.account) - accountSortKey(b.account))
+        : []}
+
       {@const tblFirst = tblSorted[0] ?? null}
       {@const tblSecond = tblSorted[1] ?? null}
-      {@const txHref = (txn.txid || txn.tindex) ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent($page.url.pathname + $page.url.search)}` : ''}
+
+      {@const txHref = txn.txid || txn.tindex
+        ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent(page.url.pathname + page.url.search)}`
+        : ''}
+
       <a
         href={txHref || undefined}
         class="group grid grid-cols-[6rem_1fr_1fr_7rem] items-center border-b border-slate-400/60 last:border-0           transition-colors cursor-pointer text-sm no-underline
@@ -493,14 +509,14 @@
         <div class="px-3 py-2 text-sm text-right whitespace-nowrap">
           {#if true}
             {@const rawMatch = account
-              ? vis.filter(p => p.account === account || p.account.startsWith(account + ':'))
-              : vis.filter(p => p.amount > 0)}
-            {@const matchPostings = rawMatch.length > 0
-              ? rawMatch
-              : vis.filter(p => p.amount !== 0)}
+              ? vis.filter((p) => p.account === account || p.account.startsWith(account + ':'))
+              : vis.filter((p) => p.amount > 0)}
+
+            {@const matchPostings = rawMatch.length > 0 ? rawMatch : vis.filter((p) => p.amount !== 0)}
+
             {#if isInvestmentAccount && account}
               {#if matchPostings.length > 0}
-                {@const byCommodity = Object.groupBy(matchPostings, p => p.commodity || '$')}
+                {@const byCommodity = Object.groupBy(matchPostings, (p) => p.commodity || '$')}
                 {@const commodities = Object.entries(byCommodity)}
                 {#each commodities as [commodity, posts], i}
                   {@const totalAmt = posts.reduce((s, p) => s + p.amount, 0)}
@@ -513,8 +529,12 @@
               {/if}
             {:else}
               {@const totalAmt = matchPostings.reduce((s, p) => s + p.amount, 0)}
-              {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : (primary?.account ?? '')}
-              <Amount value={Math.abs(totalAmt)} class={amountColor(totalAmt, amtAccount, txn.postings)} />
+              {@const amtAccount = matchPostings.length >= 1 ? matchPostings[0].account : primary?.account ?? ''}
+
+              <Amount
+                value={Math.abs(totalAmt)}
+                class={amountColor(totalAmt, amtAccount, txn.postings)}
+              />
             {/if}
           {/if}
         </div>

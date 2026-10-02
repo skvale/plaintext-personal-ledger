@@ -2,18 +2,18 @@
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
   import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { acquireSaveLock, releaseSaveLock } from '$lib/nav-lock.js';
+  import { page } from '$app/state';
+  import { acquireSaveLock, releaseSaveLock } from '#lib/nav-lock.js';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
-  import PostingSortableItem from '$lib/components/PostingSortableItem.svelte';
-  import DatePicker from '$lib/components/DatePicker.svelte';
+  import PostingSortableItem from '#lib/components/PostingSortableItem.svelte';
+  import DatePicker from '#lib/components/DatePicker.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   const detailHref = $derived(() => {
     const id = data.txn.txid ?? data.txn.tindex;
-    const ref = $page.url.searchParams.get('ref') ?? '/register';
+    const ref = page.url.searchParams.get('ref') ?? '/register';
     return `/tx/${id}?ref=${encodeURIComponent(ref)}`;
   });
 
@@ -70,24 +70,19 @@
     const { active, over } = event;
     activeDragId = null;
     if (!over || active.id === over.id) return;
-    const oldIndex = editPostings.findIndex(p => p.id === String(active.id));
-    const newIndex = editPostings.findIndex(p => p.id === String(over.id));
+    const oldIndex = editPostings.findIndex((p) => p.id === String(active.id));
+    const newIndex = editPostings.findIndex((p) => p.id === String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
     editPostings = arrayMove(editPostings, oldIndex, newIndex);
   }
 
-  const sortableIds = $derived(editPostings.map(p => ({ id: p.id })));
+  const sortableIds = $derived(editPostings.map((p) => ({ id: p.id })));
 
   const filledCount = $derived(editPostings.filter((p) => p.account.trim()).length);
+  const autoBalanceIdx = $derived(editPostings.length >= 2 && editPostings[editPostings.length - 1].amount === '' ? editPostings.length - 1 : -1);
 
-  const autoBalanceIdx = $derived(
-    editPostings.length >= 2 && editPostings[editPostings.length - 1].amount === ''
-      ? editPostings.length - 1
-      : -1
-  );
-
-  const explicitTotal = $derived(
-    editPostings.reduce((sum, p, i) => {
+  const explicitTotal = $derived(editPostings.reduce(
+    (sum, p, i) => {
       if (i === autoBalanceIdx) return sum;
       const n = (() => {
         const s = p.amount.replace(/[$,]/g, '');
@@ -114,8 +109,8 @@
     method="POST"
     action="?/update"
     use:enhance={({ formData }) => {
-      formData.set('ref', $page.url.searchParams.get('ref') ?? '/register');
-      formData.set('postings', JSON.stringify(editPostings.map(p => ({
+      formData.set('ref', page.url.searchParams.get('ref') ?? '/register');
+      formData.set('postings', JSON.stringify(editPostings.map((p) => ({
         account: p.account,
         amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
       }))));
@@ -129,7 +124,7 @@
             // If the navigation never landed we are still on the form, and the
             // journal has moved on underneath us — catch up now.
             releaseSaveLock();
-            if ($page.url.pathname === `/tx/${$page.params.id}/edit`) {
+            if (page.url.pathname === `/tx/${page.params.id}/edit`) {
               await invalidateAll();
             }
           }
@@ -142,11 +137,20 @@
     }}
     class="flex flex-col gap-5"
   >
-    <input type="hidden" name="postings" value={JSON.stringify(editPostings.map(p => ({
-      account: p.account,
-      amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
-    })))} />
-    <input type="hidden" name="ref" value={$page.url.searchParams.get('ref') ?? '/register'} />
+    <input
+      type="hidden"
+      name="postings"
+      value={JSON.stringify(editPostings.map((p) => ({
+        account: p.account,
+        amount: p.amount + (p.assertion ? ` = ${p.assertion}` : '')
+      })))}
+    />
+
+    <input
+      type="hidden"
+      name="ref"
+      value={page.url.searchParams.get('ref') ?? '/register'}
+    />
 
     <!-- Date + Vendor + Note -->
     <div class="grid grid-cols-[156px_1fr] gap-3">
@@ -191,7 +195,7 @@
         <span class="w-36 shrink-0 pl-3 text-xs font-semibold tracking-wide text-slate-100">Assertion</span>
         <span class="w-9 shrink-0"></span>
       </div>
-      <DndContext {onDragStart} {onDragEnd}>
+      <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <SortableContext items={sortableIds}>
           <div class="flex flex-col gap-2">
             {#each editPostings as posting, i (posting.id)}
@@ -203,9 +207,9 @@
                 assertion={posting.assertion}
                 showAssertion={true}
                 canRemove={editPostings.length > 2}
-                onaccountchange={(v) => (editPostings[i].account = v)}
-                onamountchange={(v) => (editPostings[i].amount = v)}
-                onassertionchange={(v) => (editPostings[i].assertion = v)}
+                onaccountchange={(v) => editPostings[i].account = v}
+                onamountchange={(v) => editPostings[i].amount = v}
+                onassertionchange={(v) => editPostings[i].assertion = v}
                 onremove={() => removePosting(i)}
               />
             {/each}
@@ -235,7 +239,38 @@
         type="submit"
         disabled={filledCount < 2 || submitting}
         class="btn-primary relative"
-      ><span class={submitting ? 'invisible' : ''}>Save Changes</span>{#if submitting}<span class="absolute inset-0 flex items-center justify-center"><svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="opacity-75" /></svg></span>{/if}</button>
+      >
+        <span class={submitting ? 'invisible' : ''}>Save Changes</span>
+
+        {#if submitting}
+          <span
+            class="absolute inset-0 flex items-center justify-center"
+          >
+            <svg
+              class="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="3"
+                class="opacity-25"
+              ></circle>
+
+              <path
+                d="M4 12a8 8 0 018-8"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                class="opacity-75"
+              ></path>
+            </svg>
+          </span>
+        {/if}
+      </button>
     </div>
   </form>
 </div>

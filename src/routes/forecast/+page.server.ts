@@ -10,8 +10,8 @@ import {
   getNetWorth,
   getMonthSummary,
   getAccountBalances
-} from '$lib/hledger.server.js';
-import type { ForecastTransaction, RecurringRule } from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
+import type { ForecastTransaction, RecurringRule } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const months = Number(url.searchParams.get('months') ?? '3');

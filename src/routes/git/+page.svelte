@@ -2,7 +2,7 @@
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
 
   const props: { data: PageData; form: ActionData } = $props();
   const data = $derived(props.data);

@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { JOURNAL } from '$lib/hledger.server.js';
+import { JOURNAL } from '#lib/hledger.server.js';
 import { readFile } from 'node:fs/promises';
 
 export const load: PageServerLoad = async () => {

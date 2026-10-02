@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from './$types.js';
 import { fail } from '@sveltejs/kit';
-import { appendTransaction, getSettings, getAccountNames, getTransactions, getDefaultCommodity, setDefaultCommodity, isHledgerAvailable, getHledgerVersion } from '$lib/hledger.server.js';
+import { appendTransaction, getSettings, getAccountNames, getTransactions, getDefaultCommodity, setDefaultCommodity, isHledgerAvailable, getHledgerVersion } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async () => {
   const hledgerOk = await isHledgerAvailable();

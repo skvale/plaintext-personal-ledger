@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getPortfolioData, getTransactions, getUnrealizedGains } from '$lib/hledger.server.js';
+import { getPortfolioData, getTransactions, getUnrealizedGains } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const monthsParam = url.searchParams.get('months');

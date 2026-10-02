@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getAccountsWithUncleared, getReconcileData, setTransactionCleared } from '$lib/hledger.server.js';
+import { getAccountsWithUncleared, getReconcileData, setTransactionCleared } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const account = url.searchParams.get('account') ?? '';

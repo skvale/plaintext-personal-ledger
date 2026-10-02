@@ -1,21 +1,21 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { page } from '$app/stores';
-  import { invalidateAll, pushState } from '$app/navigation';
+  import { page } from '$app/state';
+  import { invalidateAll, goto } from '$app/navigation';
   import { tick, onMount } from 'svelte';
-  import AccountLabel from '$lib/components/AccountLabel.svelte';
-  import FileIcon from '$lib/components/FileIcon.svelte';
-  import FilePreview from '$lib/components/FilePreview.svelte';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import DatePicker from '$lib/components/DatePicker.svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
+  import AccountLabel from '#lib/components/AccountLabel.svelte';
+  import FileIcon from '#lib/components/FileIcon.svelte';
+  import FilePreview from '#lib/components/FilePreview.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import DatePicker from '#lib/components/DatePicker.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
   import { Select, AlertDialog } from 'bits-ui';
-  import { accountTail, accountColor } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
+  import { accountTail, accountColor } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
   import type { PageData, ActionData } from './$types';
-  import type { DocFile } from '$lib/hledger.server.js';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import { billSchema } from '$lib/schemas/bill.js';
+  import type { DocFile } from '#lib/hledger.server.js';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import { billSchema } from '#lib/schemas/bill.js';
 
   let { data, form: formResult }: { data: PageData; form: ActionData } = $props();
 
@@ -56,7 +56,7 @@
   let billPostings = $state([{ account: '', amount: '' }]);
   let billPaid = $state(false);
   let billPayAccount = $state('');
-  const billBalanceAcct = $derived(billPaid ? (billPayAccount || 'assets:…') : 'liabilities:payable');
+  const billBalanceAcct = $derived(billPaid ? billPayAccount || 'assets:…' : 'liabilities:payable');
   const billTotal = $derived(() => {
     return billPostings.reduce((sum, p) => {
       const n = parseFloat(p.amount.replace(/[^0-9.\-]/g, ''));
@@ -115,7 +115,7 @@
   let mappingEdits = $state<Record<string, string>>({});
   let patternEdits = $state<Record<string, string>>({});
   let suggestedAccounts = $state<Record<string, string>>({});
-  const filledMappingCount = $derived(Object.values(mappingEdits).filter(v => v).length);
+  const filledMappingCount = $derived(Object.values(mappingEdits).filter((v) => v).length);
 
   // PDF extraction state (bill form)
   let pdfText = $state('');
@@ -216,7 +216,7 @@
   // Re-sync import state whenever the URL changes (back/forward, SvelteKit navigation)
   $effect(() => {
     // Subscribe to $page.url so this runs on every navigation
-    $page.url;
+    page.url;
     syncFromUrl();
   });
 
@@ -258,7 +258,7 @@
     const url = new URL(window.location.href);
     url.searchParams.set('import', file.relPath);
     url.searchParams.delete('preview');
-    pushState(url, {});
+    goto(url, { shallow: true });
   }
 
   function cancelImport() {
@@ -267,7 +267,7 @@
     const url = new URL(window.location.href);
     url.searchParams.delete('import');
     url.searchParams.delete('preview');
-    pushState(url, {});
+    goto(url, { shallow: true });
   }
 
   function resetPreview() {
@@ -278,8 +278,8 @@
     importError = '';
   }
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
   function fmtAmount(n: number) {
     return formatAmount(n, displayFmt);
@@ -351,39 +351,39 @@
   {:else}
     <!-- File info + rules selector (always visible) -->
     <form id="previewForm" method="POST" action="?/preview" use:enhance={() => {
-      isLoading = true;
-      previewError = '';
-      return async ({ result }) => {
-        isLoading = false;
-        if (result.type === 'success') {
-          previewOutput = (result.data as any).preview ?? '';
-          previewCount = (result.data as any).previewCount ?? 0;
-          previewToken = (result.data as any).token ?? '';
-          unmappedDescs = (result.data as any).unmapped ?? [];
-          const suggestions: Record<string, { account: string }> = (result.data as any).suggestions ?? {};
-          // Only keep mapping edits for descriptions that are still unmapped
-          const stillUnmapped = new Set(unmappedDescs);
-          const keptEdits: Record<string, string> = {};
-          for (const [desc, val] of Object.entries(mappingEdits)) {
-            if (stillUnmapped.has(desc)) keptEdits[desc] = val;
+        isLoading = true;
+        previewError = '';
+        return async ({ result }) => {
+          isLoading = false;
+          if (result.type === 'success') {
+            previewOutput = (result.data as any).preview ?? '';
+            previewCount = (result.data as any).previewCount ?? 0;
+            previewToken = (result.data as any).token ?? '';
+            unmappedDescs = (result.data as any).unmapped ?? [];
+            const suggestions: Record<string, { account: string }> = (result.data as any).suggestions ?? {};
+            // Only keep mapping edits for descriptions that are still unmapped
+            const stillUnmapped = new Set(unmappedDescs);
+            const keptEdits: Record<string, string> = {};
+            for (const [desc, val] of Object.entries(mappingEdits)) {
+              if (stillUnmapped.has(desc)) keptEdits[desc] = val;
+            }
+            mappingEdits = keptEdits;
+            const keptPatterns: Record<string, string> = {};
+            for (const [desc, val] of Object.entries(patternEdits)) {
+              if (stillUnmapped.has(desc)) keptPatterns[desc] = val;
+            }
+            patternEdits = keptPatterns;
+            suggestedAccounts = {};
+            for (const [desc, s] of Object.entries(suggestions)) {
+              suggestedAccounts[desc] = s.account;
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('preview', '1');
+            pushState(url, {});
+          } else if (result.type === 'failure') {
+            previewError = (result.data as any)?.previewError ?? 'Preview failed.';
           }
-          mappingEdits = keptEdits;
-          const keptPatterns: Record<string, string> = {};
-          for (const [desc, val] of Object.entries(patternEdits)) {
-            if (stillUnmapped.has(desc)) keptPatterns[desc] = val;
-          }
-          patternEdits = keptPatterns;
-          suggestedAccounts = {};
-          for (const [desc, s] of Object.entries(suggestions)) {
-            suggestedAccounts[desc] = s.account;
-          }
-          const url = new URL(window.location.href);
-          url.searchParams.set('preview', '1');
-          pushState(url, {});
-        } else if (result.type === 'failure') {
-          previewError = (result.data as any)?.previewError ?? 'Preview failed.';
-        }
-      };
+        };
     }} class="space-y-4">
       <input type="hidden" name="csvRel" value={importingFile.relPath} />
 
@@ -392,19 +392,27 @@
           <span class="whitespace-nowrap text-sm text-slate-100">Rules file</span>
           <input type="hidden" name="rulesFile" value={selectedRulesFile} />
           <Select.Root type="single" value={selectedRulesFile} onValueChange={(v) => {
-            if (v) {
-              selectedRulesFile = v;
-              if (isPreviewing) {
-                resetPreview();
-                tick().then(() => {
-                  document.querySelector<HTMLFormElement>('#previewForm')?.requestSubmit();
-                });
+              if (v) {
+                selectedRulesFile = v;
+                if (isPreviewing) {
+                  resetPreview();
+                  tick().then(() => {
+                    document.querySelector<HTMLFormElement>('#previewForm')?.requestSubmit();
+                  });
+                }
               }
-            }
           }}>
             <Select.Trigger class="flex flex-1 items-center justify-between rounded-md border border-slate-300 bg-slate-900 px-3 py-2 text-sm text-slate-100 transition-colors hover:border-slate-600 focus:border-blue-300 focus:outline-none">
-              {selectedRulesFile || 'Select…'}
-              <svg class="ml-2 h-3.5 w-3.5 shrink-0 text-slate-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+              {selectedRulesFile || 'Select…'} 
+
+              <svg
+                class="ml-2 h-3.5 w-3.5 shrink-0 text-slate-100"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              ><path d="m6 9 6 6 6-6"></path></svg>
             </Select.Trigger>
             <Select.Portal>
               <Select.Content class="z-50 rounded-lg border border-slate-300 bg-slate-900 py-1 shadow-xl" sideOffset={4} style="min-width: var(--bits-select-anchor-width)">
@@ -531,10 +539,18 @@
       <div class="mt-5 space-y-4">
         <button
           type="button"
-          onclick={() => (previewCollapsed = !previewCollapsed)}
+          onclick={() => previewCollapsed = !previewCollapsed}
           class="flex w-full items-center gap-2 text-left"
         >
-          <svg class="h-3.5 w-3.5 shrink-0 text-slate-100 transition-transform {previewCollapsed ? '' : 'rotate-90'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+          <svg
+            class="h-3.5 w-3.5 shrink-0 text-slate-100 transition-transform {previewCollapsed ? '' : 'rotate-90'}"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          ><path d="m9 18 6-6-6-6"></path></svg>
+
           <span class="text-sm font-medium text-slate-100">
             {#if previewCount > 0}
               {previewCount} transaction{previewCount === 1 ? '' : 's'} to import
@@ -630,7 +646,11 @@
                   fd.set('mappings', JSON.stringify(mappings));
                   const saveRes = await fetch('?/addMappings', { method: 'POST', body: fd });
                   const saveJson = await saveRes.json();
-                  const saveData = saveJson?.data ? (typeof saveJson.data === 'string' ? JSON.parse(saveJson.data) : saveJson.data) : null;
+
+                  const saveData = saveJson?.data
+                    ? typeof saveJson.data === 'string' ? JSON.parse(saveJson.data) : saveJson.data
+                    : null;
+
                   if (saveData?.mappingError) {
                     previewError = saveData.mappingError;
                     return;
@@ -644,7 +664,11 @@
                   pfd.set('rulesFile', selectedRulesFile);
                   const res = await fetch('?/preview', { method: 'POST', body: pfd });
                   const json = await res.json();
-                  const pData = json?.data ? (typeof json.data === 'string' ? JSON.parse(json.data) : json.data) : null;
+
+                  const pData = json?.data
+                    ? typeof json.data === 'string' ? JSON.parse(json.data) : json.data
+                    : null;
+
                   isLoading = false;
                   if (!pData || pData.previewError) {
                     previewError = pData?.previewError ?? 'Preview failed.';
@@ -708,7 +732,11 @@
               cfd.set('token', previewToken);
               const cRes = await fetch('?/confirm', { method: 'POST', body: cfd });
               const cJson = await cRes.json();
-              const cData = cJson?.data ? (typeof cJson.data === 'string' ? JSON.parse(cJson.data) : cJson.data) : null;
+
+              const cData = cJson?.data
+                ? typeof cJson.data === 'string' ? JSON.parse(cJson.data) : cJson.data
+                : null;
+
               isLoading = false;
               if (cData?.importError) {
                 importError = cData.importError;
@@ -731,297 +759,315 @@
 
 {:else}
 
-<!-- ── Normal docs view ──────────────────────────────────────────────────────── -->
+  <!-- ── Normal docs view ──────────────────────────────────────────────────────── -->
 
-<LearningBanner id="docs" title="Statement files">
+  <LearningBanner id="docs" title="Statement files">
   Upload your bank and credit card statements here (CSV files). When you import one, PlainText Personal Ledger reads it
   and creates transactions automatically. Keeping the original files means you can always double-check
   where a number came from.
-</LearningBanner>
+  </LearningBanner>
 
-<div class="mb-6 flex items-center justify-between">
-  <div>
-    <h1 class="text-xl font-semibold text-slate-100">Documents</h1>
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-semibold text-slate-100">Documents</h1>
     <p class="mt-0.5 text-sm text-slate-100">From <span class="font-mono">docs/statements/</span> <span class="font-mono">docs/bills/</span> <span class="font-mono">docs/attachments/</span></p>
-  </div>
-  <div class="flex gap-2">
-    <button type="button" onclick={() => mode = mode === 'invoice' ? 'none' : 'invoice'}
-      class="{mode === 'invoice' ? 'btn-pill-active' : 'btn-pill'}">
-      + Bill
-    </button>
-    <button type="button" onclick={() => mode = mode === 'upload' ? 'none' : 'upload'}
-      class="{mode === 'upload' ? 'btn-pill-active' : 'btn-pill'}">
-      + Statement
-    </button>
-  </div>
-</div>
+    </div>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        onclick={() => mode = mode === 'invoice' ? 'none' : 'invoice'}
+        class={mode === 'invoice' ? 'btn-pill-active' : 'btn-pill'}
+      >+ Bill</button>
 
-<!-- Invoice intake -->
+      <button
+        type="button"
+        onclick={() => mode = mode === 'upload' ? 'none' : 'upload'}
+        class={mode === 'upload' ? 'btn-pill-active' : 'btn-pill'}
+      >+ Statement</button>
+    </div>
+  </div>
+
+  <!-- Invoice intake -->
 <div class="grid transition-[grid-template-rows,opacity] duration-100 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] {mode === 'invoice' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}">
-<div class="overflow-hidden">
+    <div class="overflow-hidden">
   <div class="mb-5 rounded-xl border border-slate-300 bg-slate-900 p-5 transition-transform duration-100 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] {mode === 'invoice' ? 'translate-y-0' : '-translate-y-2'}">
-    {#if billSuccess}
-      <div class="text-center py-4 space-y-4">
-        <div class="text-2xl text-emerald-400">✓</div>
-        <p class="text-sm font-medium text-slate-100">Bill recorded</p>
-        <p class="text-sm text-slate-100">{billVendor}{billDescription ? ` — ${billDescription}` : ''}</p>
+        {#if billSuccess}
+          <div class="text-center py-4 space-y-4">
+            <div class="text-2xl text-emerald-400">✓</div>
+            <p class="text-sm font-medium text-slate-100">Bill recorded</p>
+            <p class="text-sm text-slate-100">{billVendor}{billDescription ? ` — ${billDescription}` : ''}</p>
 
-        <!-- Transaction summary -->
+            <!-- Transaction summary -->
         <div class="rounded-lg border border-slate-400 bg-slate-950 px-4 py-3 text-left">
-          <div class="space-y-1.5">
-            {#each billPostings.filter(p => p.account && p.amount) as posting}
-              {@const acct = posting.account}
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <AccountBadge account={acct} />
-                  <span class="font-mono text-xs {accountColor(acct)}">{accountTail(acct)}</span>
-                </div>
+              <div class="space-y-1.5">
+                {#each billPostings.filter((p) => p.account && p.amount) as posting}
+                  {@const acct = posting.account}
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                      <AccountBadge account={acct} />
+                      <span class="font-mono text-xs {accountColor(acct)}">{accountTail(acct)}</span>
+                    </div>
                 <span class="font-mono text-sm tabular-nums text-rose-400">${fmtAmt(posting.amount)}</span>
-              </div>
-            {/each}
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <AccountBadge account={billBalanceAcct} />
+                  </div>
+                {/each}
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <AccountBadge account={billBalanceAcct} />
                 <span class="font-mono text-xs {accountColor(billBalanceAcct)}">{accountTail(billBalanceAcct)}</span>
-              </div>
+                  </div>
               <span class="font-mono text-sm tabular-nums text-emerald-400">-${billTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {#if billFileName}
+            {#if billFileName}
           <p class="text-sm text-slate-100">Attached <span class="font-mono text-slate-100">{billFileName}</span></p>
-        {/if}
+            {/if}
 
-        <div class="flex justify-center gap-3">
-          <button
-            type="button"
-            onclick={() => {
-              billSuccess = false;
-              billSubmitted = false;
-              billVendor = '';
-              billDescription = '';
-              billPostings = [{ account: '', amount: '' }];
-              billPaid = false;
-              billPayAccount = '';
-              billFileName = '';
-              billErrors = {};
-            }}
-            class="rounded-md bg-blue-300/10 px-4 py-2 text-sm font-medium text-blue-500 transition-colors hover:bg-blue-300/20"
+            <div class="flex justify-center gap-3">
+              <button
+                type="button"
+                onclick={() => {
+                  billSuccess = false;
+                  billSubmitted = false;
+                  billVendor = '';
+                  billDescription = '';
+                  billPostings = [{ account: '', amount: '' }];
+                  billPaid = false;
+                  billPayAccount = '';
+                  billFileName = '';
+                  billErrors = {};
+                }}
+                class="rounded-md bg-blue-300/10 px-4 py-2 text-sm font-medium text-blue-500 transition-colors hover:bg-blue-300/20"
           >
             Record another
           </button>
-          <button
-            type="button"
+              <button
+                type="button"
             onclick={() => { billSuccess = false; mode = 'none'; }}
-            class="rounded-md px-4 py-2 text-sm text-slate-100 transition-colors hover:text-slate-100"
+                class="rounded-md px-4 py-2 text-sm text-slate-100 transition-colors hover:text-slate-100"
           >
             Done
           </button>
-        </div>
-      </div>
-    {:else}
-    <p class="mb-4 text-sm font-semibold text-slate-100">New bill{billPaid ? '' : ' → payable'}</p>
-    {#if !billPaid && $page.data.settings?.learning?.enabled && $page.data.settings?.learning?.level === 'beginner'}
-      <div class="mb-3 -mt-2 rounded-md border border-blue-300 bg-blue-50/50 dark:border-blue-300/25 dark:bg-blue-300/5 px-4 py-3 text-sm leading-relaxed text-blue-800 dark:text-blue-500/80 space-y-3">
-        <p>Recording a bill creates a transaction like this:</p>
+            </div>
+          </div>
+        {:else}
+          <p class="mb-4 text-sm font-semibold text-slate-100">New bill{billPaid ? '' : ' → payable'}</p>
+
+          {#if !billPaid && page.data.settings?.learning?.enabled && page.data.settings?.learning?.level === 'beginner'}
+            <div
+              class="mb-3 -mt-2 rounded-md border border-blue-300 bg-blue-50/50 dark:border-blue-300/25 dark:bg-blue-300/5 px-4 py-3 text-sm leading-relaxed text-blue-800 dark:text-blue-500/80 space-y-3"
+            >
+              <p>Recording a bill creates a transaction like this:</p>
         <div class="rounded-md border border-blue-300/15 bg-blue-300/5 px-3 py-2 font-mono text-sm space-y-1">
-          <div class="flex justify-between">
-            <span><span class="inline-flex align-baseline"><AccountLabel account="expenses:…" size="sm" /></span></span>
-            <span class="text-slate-100">$amount</span>
-          </div>
-          <div class="flex justify-between">
-            <span><span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span></span>
-            <span class="text-slate-100">$amount owed</span>
-          </div>
-        </div>
+                <div class="flex justify-between">
+                  <span><span class="inline-flex align-baseline"><AccountLabel account="expenses:…" size="sm" /></span></span>
+                  <span class="text-slate-100">$amount</span>
+                </div>
+                <div class="flex justify-between">
+                  <span><span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span></span>
+                  <span class="text-slate-100">$amount owed</span>
+                </div>
+              </div>
         <p>The expense is recorded immediately, and <span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span> tracks what you still owe.</p>
         <p>When you pay the bill later, a second transaction offsets <span class="inline-flex align-baseline"><AccountLabel account="liabilities:payable" size="sm" /></span> — moving the amount from your payment account (an Asset like checking, or another Liability like a credit card) to settle the bill.</p>
-        <p>This way your expense reports are accurate from day one, even before payment clears.</p>
-        <p>If you've already paid, check "Already paid" below to skip the payable step.</p>
-        <div class="mt-2 text-right">
+              <p>This way your expense reports are accurate from day one, even before payment clears.</p>
+              <p>If you've already paid, check "Already paid" below to skip the payable step.</p>
+              <div class="mt-2 text-right">
           <a href="/settings#learning" class="whitespace-nowrap text-xs text-blue-700 dark:text-blue-500 underline underline-offset-2 hover:text-blue-900 dark:hover:text-blue-500 visited:text-blue-700 dark:visited:text-blue-500">Learning Mode settings</a>
-        </div>
-      </div>
-    {/if}
+              </div>
+            </div>
+          {/if}
     <form id="bill-form" method="POST" action="?/invoice" enctype="multipart/form-data"
-      use:enhance={() => {
-        billSubmitted = true;
-        if (!validateBill()) return async () => {};
-        return async ({ result, update }) => {
-          if (result.type === 'success') {
-            billSuccess = true;
-            invalidateAll();
-          } else {
-            await update();
-          }
-        };
-      }}
+            use:enhance={() => {
+              billSubmitted = true;
+              if (!validateBill()) return async () => {};
+              return async ({ result, update }) => {
+                if (result.type === 'success') {
+                  billSuccess = true;
+                  invalidateAll();
+                } else {
+                  await update();
+                }
+              };
+            }}
       class="flex flex-col gap-3">
 
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-1.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
           <label for="inv-file" class="text-xs font-semibold tracking-wide text-slate-100">File <span class="font-normal text-slate-100">(optional)</span></label>
           <label class="flex cursor-pointer items-center gap-2 {inputCls}">
             <span class="shrink-0 rounded border border-dashed border-slate-500 bg-slate-800/50 px-2 py-0.5 text-sm text-slate-400">Browse</span>
             <span class="min-w-0 truncate text-sm {billFileName ? 'text-slate-100' : 'text-slate-100'}">{billFileName || 'No file chosen'}</span>
             <input id="inv-file" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg"
-              onchange={onBillFileChange}
+                    onchange={onBillFileChange}
               class="sr-only" />
-          </label>
-        </div>
-        <div class="flex flex-col gap-1.5">
+                </label>
+              </div>
+              <div class="flex flex-col gap-1.5">
           <label for="inv-date" class="text-xs font-semibold tracking-wide text-slate-100">Date</label>
-          <DatePicker value={data.today} name="date" />
-        </div>
-      </div>
+                <DatePicker value={data.today} name="date" />
+              </div>
+            </div>
 
-      {#if billFileName}
-        <div class="flex flex-col gap-1.5">
+            {#if billFileName}
+              <div class="flex flex-col gap-1.5">
           <label for="inv-filename" class="text-xs font-semibold tracking-wide text-slate-100">Save as</label>
           <input id="inv-filename" type="text" name="filename" bind:value={billFileName} class={inputCls} />
-        </div>
-      {/if}
+              </div>
+            {/if}
 
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-1.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
           <label for="inv-vendor" class="text-xs font-semibold tracking-wide text-slate-100">Vendor {#if billErrors.vendor}<span class="font-normal text-rose-400">{billErrors.vendor[0]}</span>{/if}</label>
           <input id="inv-vendor" type="text" name="vendor" bind:value={billVendor} autocomplete="off" class="{inputCls} {billErrors.vendor ? '!border-rose-500/60' : ''}" />
-        </div>
-        <div class="flex flex-col gap-1.5">
+              </div>
+              <div class="flex flex-col gap-1.5">
           <label for="inv-desc" class="text-xs font-semibold tracking-wide text-slate-100">Description <span class="font-normal text-slate-100">(optional)</span></label>
           <input id="inv-desc" type="text" name="description" autocomplete="off" class={inputCls} />
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <div class="flex items-center gap-3 text-xs font-semibold tracking-wide text-slate-100">
-          <span class="flex-1">Expense account</span>
-          <span style="width: 120px;">Amount</span>
-          <span style="width: 28px;"></span>
-        </div>
-        {#each billPostings as posting, i}
-          <div class="flex items-center gap-3">
-            <!-- svelte-ignore a11y_label_has_associated_control -->
-            <div class="flex-1">
-              <Combobox
-                items={data.expenseAccounts}
-                value={posting.account}
-                name="account_{i}"
-                placeholder="expenses:…"
-                onchange={(v) => { billPostings[i].account = v ?? ''; billPostings = billPostings; }}
-                inputClass="{inputCls} w-full pr-8 {billErrors[`postings.${i}.account`] ? '!border-rose-500/60' : ''}"
-              />
+              </div>
             </div>
-            <input
-              type="text"
-              name="amount_{i}"
-              bind:value={posting.amount}
-              class="{inputCls} tabular-nums {billErrors[`postings.${i}.amount`] ? '!border-rose-500/60' : ''}"
-              style="width: 120px;"
-            />
-            {#if billPostings.length > 1}
+
+            <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-3 text-xs font-semibold tracking-wide text-slate-100">
+                <span class="flex-1">Expense account</span>
+                <span style="width: 120px;">Amount</span>
+                <span style="width: 28px;"></span>
+              </div>
+              {#each billPostings as posting, i}
+                <div class="flex items-center gap-3">
+                  <!-- svelte-ignore a11y_label_has_associated_control -->
+                  <div class="flex-1">
+                    <Combobox
+                      items={data.expenseAccounts}
+                      value={posting.account}
+                      name="account_{i}"
+                      placeholder="expenses:…"
+                onchange={(v) => { billPostings[i].account = v ?? ''; billPostings = billPostings; }}
+                      inputClass="{inputCls} w-full pr-8 {billErrors[`postings.${i}.account`] ? '!border-rose-500/60' : ''}"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    name="amount_{i}"
+                    bind:value={posting.amount}
+                    class="{inputCls} tabular-nums {billErrors[`postings.${i}.amount`] ? '!border-rose-500/60' : ''}"
+                    style="width: 120px;"
+                  />
+                  {#if billPostings.length > 1}
+                    <button
+                      type="button"
+                onclick={() => { billPostings = billPostings.filter((_, j) => j !== i); }}
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-600 text-slate-400 transition-colors hover:border-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
+                    >
+                      <svg
+                        class="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      >
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                      </svg>
+                    </button>
+                  {:else}
+                    <span style="width: 28px;"></span>
+                  {/if}
+                </div>
+              {/each}
               <button
                 type="button"
-                onclick={() => { billPostings = billPostings.filter((_, j) => j !== i); }}
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-600 text-slate-400 transition-colors hover:border-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
-              ><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-            {:else}
-              <span style="width: 28px;"></span>
-            {/if}
-          </div>
-        {/each}
-        <button
-          type="button"
           onclick={() => { billPostings = [...billPostings, { account: '', amount: '' }]; }}
-          class="self-start text-xs text-slate-100 transition-colors hover:text-slate-100"
-        >+ Add line</button>
-      </div>
+                class="self-start text-xs text-slate-100 transition-colors hover:text-slate-100"
+              >+ Add line</button>
+            </div>
 
       <input type="hidden" name="postings" value={JSON.stringify(billPostings)} />
 
-      <!-- Paid toggle -->
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          name="paid"
-          value="true"
-          bind:checked={billPaid}
-          class="accent-blue-400 w-4 h-4"
-        />
-        <div>
-          <p class="text-sm font-medium text-slate-100">Already paid</p>
-          <p class="text-xs text-slate-100">Record as paid instead of creating a payable</p>
-        </div>
-      </label>
-
-      {#if billPaid}
-        <!-- svelte-ignore a11y_label_has_associated_control -->
-        <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-semibold tracking-wide text-slate-100">Paid from {#if billErrors.payAccount}<span class="font-normal text-rose-400">{billErrors.payAccount[0]}</span>{/if}</span>
-          <Combobox
-            items={data.paymentAccounts}
-            value={billPayAccount}
-            name="payAccount"
-            placeholder=""
-            onchange={(v) => { billPayAccount = v ?? ''; }}
-            inputClass="{inputCls} w-full pr-8 {billErrors.payAccount ? '!border-rose-500/60' : ''}"
-          />
-        </label>
-      {/if}
-
-      <!-- Transaction preview -->
-      <div class="rounded-lg border border-slate-400 bg-slate-950 px-4 py-3">
-        <p class="mb-2 text-xs font-semibold text-slate-100">Transaction preview</p>
-        <div class="space-y-1.5">
-          {#each billPostings as posting}
-            {@const acct = posting.account || 'expenses:…'}
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <AccountBadge account={acct} />
-                <span class="font-mono text-xs {accountColor(acct)}">{accountTail(acct)}</span>
+            <!-- Paid toggle -->
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="paid"
+                value="true"
+                bind:checked={billPaid}
+                class="accent-blue-400 w-4 h-4"
+              />
+              <div>
+                <p class="text-sm font-medium text-slate-100">Already paid</p>
+                <p class="text-xs text-slate-100">Record as paid instead of creating a payable</p>
               </div>
-              <span class="font-mono text-sm tabular-nums text-rose-400">${fmtAmt(posting.amount)}</span>
-            </div>
-          {/each}
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <AccountBadge account={billBalanceAcct} />
-              <span class="font-mono text-xs {accountColor(billBalanceAcct)}">{accountTail(billBalanceAcct)}</span>
-            </div>
-            <span class="font-mono text-sm tabular-nums text-emerald-400">-${billTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-        </div>
-      </div>
+            </label>
 
-      <!-- PDF extraction debug panel -->
-      {#if pdfExtracting}
+            {#if billPaid}
+              <!-- svelte-ignore a11y_label_has_associated_control -->
+              <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-semibold tracking-wide text-slate-100">Paid from {#if billErrors.payAccount}<span class="font-normal text-rose-400">{billErrors.payAccount[0]}</span>{/if}</span>
+                <Combobox
+                  items={data.paymentAccounts}
+                  value={billPayAccount}
+                  name="payAccount"
+                  placeholder=""
+            onchange={(v) => { billPayAccount = v ?? ''; }}
+                  inputClass="{inputCls} w-full pr-8 {billErrors.payAccount ? '!border-rose-500/60' : ''}"
+                />
+              </label>
+            {/if}
+
+            <!-- Transaction preview -->
+      <div class="rounded-lg border border-slate-400 bg-slate-950 px-4 py-3">
+              <p class="mb-2 text-xs font-semibold text-slate-100">Transaction preview</p>
+              <div class="space-y-1.5">
+                {#each billPostings as posting}
+                  {@const acct = posting.account || 'expenses:…'}
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                      <AccountBadge account={acct} />
+                      <span class="font-mono text-xs {accountColor(acct)}">{accountTail(acct)}</span>
+                    </div>
+              <span class="font-mono text-sm tabular-nums text-rose-400">${fmtAmt(posting.amount)}</span>
+                  </div>
+                {/each}
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <AccountBadge account={billBalanceAcct} />
+              <span class="font-mono text-xs {accountColor(billBalanceAcct)}">{accountTail(billBalanceAcct)}</span>
+                  </div>
+            <span class="font-mono text-sm tabular-nums text-emerald-400">-${billTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- PDF extraction debug panel -->
+            {#if pdfExtracting}
         <div class="rounded-lg border border-slate-300 bg-slate-800/50 px-4 py-3 text-sm text-slate-100">
           Extracting text…
         </div>
-      {:else if pdfError}
+            {:else if pdfError}
         <div class="rounded-lg border border-rose-800/40 bg-rose-950/20 px-4 py-3 text-sm text-rose-400">
           {pdfError}
         </div>
-      {:else if pdfText}
-        <div class="flex flex-col gap-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-slate-100">
-              Extracted text — {pdfPages} page{pdfPages === 1 ? '' : 's'}
+            {:else if pdfText}
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-slate-100">
+                    Extracted text — {pdfPages} page{pdfPages === 1 ? '' : 's'} 
               {#if pdfIsEmpty}<span class="ml-2 text-amber-400">⚠ may be scanned/image PDF</span>{/if}
-            </span>
-          </div>
+                  </span>
+                </div>
           <div class="max-h-48 overflow-y-auto rounded-lg border border-slate-300 bg-slate-950 p-3">
             <pre class="whitespace-pre-wrap font-mono text-xs leading-relaxed text-slate-100">{pdfText}</pre>
-          </div>
-        </div>
-      {/if}
+                </div>
+              </div>
+            {/if}
 
-      {#if formResult?.invoiceError}
-        <p class="text-sm text-rose-400">{formResult.invoiceError}</p>
-      {/if}
+            {#if formResult?.invoiceError}
+              <p class="text-sm text-rose-400">{formResult.invoiceError}</p>
+            {/if}
 
-      <div class="flex gap-2">
+            <div class="flex gap-2">
         <button type="submit" class="btn-primary">
           Record bill
         </button>
@@ -1029,22 +1075,22 @@
           class="btn-cancel">
           Cancel
         </button>
+            </div>
+          </form>
+        {/if}
       </div>
-    </form>
-    {/if}
+    </div>
   </div>
-</div>
-</div>
 
-<!-- Simple upload -->
+  <!-- Simple upload -->
 <div class="grid transition-[grid-template-rows,opacity] duration-100 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] {mode === 'upload' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}">
-<div class="overflow-hidden">
+    <div class="overflow-hidden">
   <div class="mb-5 rounded-xl border border-slate-300 bg-slate-900 p-5 transition-transform duration-100 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] {mode === 'upload' ? 'translate-y-0' : '-translate-y-2'}">
-    <p class="mb-4 text-sm font-semibold text-slate-100">Upload file</p>
+        <p class="mb-4 text-sm font-semibold text-slate-100">Upload file</p>
     <form method="POST" action="?/upload" enctype="multipart/form-data"
       use:enhance class="flex flex-col gap-3">
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-1.5">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
           <label for="up-file" class="text-xs font-semibold tracking-wide text-slate-100">File</label>
           <label class="flex cursor-pointer items-center gap-2 {inputCls}">
             <span class="shrink-0 rounded border border-dashed border-slate-500 bg-slate-800/50 px-2 py-0.5 text-sm text-slate-400">Browse</span>
@@ -1052,14 +1098,14 @@
             <input id="up-file" type="file" name="file"
               onchange={(e) => { stmtFileName = (e.target as HTMLInputElement).files?.[0]?.name ?? ''; }}
               class="sr-only" />
-          </label>
-        </div>
-        <div class="flex flex-col gap-1.5">
+              </label>
+            </div>
+            <div class="flex flex-col gap-1.5">
           <label for="up-month" class="text-xs font-semibold tracking-wide text-slate-100">Month</label>
           <input id="up-month" type="month" name="month" bind:value={month} class={inputCls} />
-        </div>
-      </div>
-      <div class="flex gap-2">
+            </div>
+          </div>
+          <div class="flex gap-2">
         <button type="submit" class="btn-primary">
           Upload
         </button>
@@ -1067,204 +1113,212 @@
           class="btn-cancel">
           Cancel
         </button>
+          </div>
+        </form>
+        {#if formResult?.error}
+          <p class="mt-2 text-sm text-rose-400">{formResult.error}</p>
+        {/if}
       </div>
-    </form>
-    {#if formResult?.error}
-      <p class="mt-2 text-sm text-rose-400">{formResult.error}</p>
-    {/if}
+    </div>
   </div>
-</div>
-</div>
 
-<!-- Gap warnings -->
-{#if data.gaps.length > 0}
+  <!-- Gap warnings -->
+  {#if data.gaps.length > 0}
   <div class="mb-4 rounded-xl border border-amber-800/40 bg-amber-950/20 px-4 py-3">
     <p class="mb-2 text-xs font-semibold tracking-wide text-amber-500">POSSIBLE MISSING STATEMENTS</p>
-    <ul class="flex flex-col gap-1">
-      {#each data.gaps as gap}
-        <li class="font-mono text-sm text-amber-400/80">{gap}</li>
-      {/each}
-    </ul>
-  </div>
-{/if}
+      <ul class="flex flex-col gap-1">
+        {#each data.gaps as gap}
+          <li class="font-mono text-sm text-amber-400/80">{gap}</li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 
-<!-- File list -->
-{#if data.monthGroups.length === 0}
+  <!-- File list -->
+  {#if data.monthGroups.length === 0}
   <div class="rounded-xl border border-slate-400 bg-slate-900 px-6 py-12 text-center">
-    <p class="text-sm text-slate-100">No documents found.</p>
+      <p class="text-sm text-slate-100">No documents found.</p>
     <p class="mt-2 text-sm text-slate-100">Add files to <span class="font-mono">docs/statements/YYYY-MM/</span> next to your journal.</p>
-  </div>
-{:else}
-  <div class="flex flex-col gap-4">
-    {#each data.monthGroups as group}
-      {@const isExpanded = expandedMonths[group.month] ?? false}
-      {@const multiSection = group.sections.length > 1}
+    </div>
+  {:else}
+    <div class="flex flex-col gap-4">
+      {#each data.monthGroups as group}
+        {@const isExpanded = expandedMonths[group.month] ?? false}
+        {@const multiSection = group.sections.length > 1}
       <div class="overflow-hidden rounded-xl border border-slate-400 bg-slate-900">
-        <!-- Month header — clickable accordion -->
-        <button
+          <!-- Month header — clickable accordion -->
+          <button
           onclick={() => { expandedMonths[group.month] = !isExpanded; }}
-          class="flex w-full items-center justify-between border-b border-slate-400 px-5 py-3 text-left"
-        >
-          <p class="text-xs font-semibold tracking-wide text-slate-100">{group.month}</p>
-          <svg
-            class="h-3.5 w-3.5 shrink-0 text-slate-100 transition-transform {isExpanded ? 'rotate-90' : ''}"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
+            class="flex w-full items-center justify-between border-b border-slate-400 px-5 py-3 text-left"
           >
-            <path d="m9 18 6-6-6-6"/>
-          </svg>
-        </button>
-        <!-- Sections (statements, invoices, etc.) -->
-        {#if isExpanded}
-        {#each group.sections as section}
-          {#if multiSection && section.label}
+          <p class="text-xs font-semibold tracking-wide text-slate-100">{group.month}</p>
+            <svg
+              class="h-3.5 w-3.5 shrink-0 text-slate-100 transition-transform {isExpanded ? 'rotate-90' : ''}"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            ><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <!-- Sections (statements, invoices, etc.) -->
+          {#if isExpanded}
+            {#each group.sections as section}
+              {#if multiSection && section.label}
             <p class="border-b border-slate-400/60 bg-slate-800/20 px-5 py-1.5 text-xs text-slate-100">{section.label}</p>
-          {/if}
-          <div class="divide-y divide-slate-800/40">
-            {#each section.files as file}
+              {/if}
+              <div class="divide-y divide-slate-800/40">
+                {#each section.files as file}
               <div class="relative flex flex-wrap items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-800/30">
-                <FileIcon ext={file.ext} />
-                <span class="flex-1 min-w-0">
+                    <FileIcon ext={file.ext} />
+                    <span class="flex-1 min-w-0">
                   <FilePreview src={fileUrl(file.relPath)} name={file.name} ext={file.ext}>
                     <span class="font-mono text-sm text-slate-100">{file.name}</span>
                   </FilePreview>
-                </span>
-                <span class="text-xs text-slate-100">{fmtSize(file.size)}</span>
-
-                {#if file.ext === 'csv'}
-                  {#if file.latestImport}
-                    <span class="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
-                      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      Latest: {file.latestImport}
                     </span>
-                  {:else}
-                    <button
-                      onclick={() => startImport(file)}
-                      class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-blue-300/50 hover:text-blue-500"
+                    <span class="text-xs text-slate-100">{fmtSize(file.size)}</span>
+
+                    {#if file.ext === 'csv'}
+                      {#if file.latestImport}
+                        <span
+                          class="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400"
+                        >
+                          <svg
+                            class="h-3.5 w-3.5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ><polyline points="20 6 9 17 4 12"></polyline></svg>
+
+                          Latest: {file.latestImport}
+                        </span>
+                      {:else}
+                        <button
+                          onclick={() => startImport(file)}
+                          class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-blue-300/50 hover:text-blue-500"
                     >
                       Import
                     </button>
-                  {/if}
-                {/if}
+                      {/if}
+                    {/if}
 
-                {#each (data.docTransactions[file.relPath] ?? []) as txn}
-                  <a
-                    href="/tx/{txn.txid ?? txn.tindex}?ref={encodeURIComponent('/docs')}"
-                    class="rounded-md border border-slate-300/60 bg-slate-800/40 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100"
-                    title="{txn.date} {txn.description}"
+                    {#each data.docTransactions[file.relPath] ?? [] as txn}
+                      <a
+                        href="/tx/{txn.txid ?? txn.tindex}?ref={encodeURIComponent('/docs')}"
+                        class="rounded-md border border-slate-300/60 bg-slate-800/40 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100"
+                        title="{txn.date} {txn.description}"
                   >
                     {txn.date} · {txn.vendor.length > 28 ? txn.vendor.slice(0, 28) + '…' : txn.vendor}
                   </a>
-                  {#if txn.unpaid}
+                      {#if txn.unpaid}
                     <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500">
                       unpaid
                     </span>
-                    <button
-                      type="button"
+                        <button
+                          type="button"
                       onclick={() => { payingDocPath = file.relPath; payDate = data.today; payAccount = data.paymentAccounts[0] ?? ''; payError = ''; }}
-                      class="rounded-md border border-emerald-700/50 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
-                    >Pay</button>
-                  {/if}
-                {/each}
-                {#if payingDocPath === file.relPath}
-                  {@const txn = (data.docTransactions[file.relPath] ?? [])[0]}
-                  <div class="w-full mt-1 flex flex-col gap-1.5">
+                          class="rounded-md border border-emerald-700/50 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                        >Pay</button>
+                      {/if}
+                    {/each}
+                    {#if payingDocPath === file.relPath}
+                      {@const txn = (data.docTransactions[file.relPath] ?? [])[0]}
+                      <div class="w-full mt-1 flex flex-col gap-1.5">
                     <form method="POST" action="?/pay" use:enhance={() => {
-                      paySubmitting = true;
-                      payError = '';
-                      return async ({ result, update }) => {
-                        paySubmitting = false;
-                        if (result.type === 'success') {
-                          payingDocPath = null;
-                          await update();
-                        } else {
-                          payError = (result as any).data?.payError ?? 'Payment failed.';
-                          await update({ reset: false });
-                        }
-                      };
+                            paySubmitting = true;
+                            payError = '';
+                            return async ({ result, update }) => {
+                              paySubmitting = false;
+                              if (result.type === 'success') {
+                                payingDocPath = null;
+                                await update();
+                              } else {
+                                payError = (result as any).data?.payError ?? 'Payment failed.';
+                                await update({ reset: false });
+                              }
+                            };
                     }} class="flex items-center gap-2">
                       <input type="hidden" name="vendor" value={txn?.vendor ?? ''} />
                       <input type="hidden" name="amount" value={txn?.amount ? fmtAmount(txn.amount) : ''} />
-                      <input type="hidden" name="docPath" value={file.relPath} />
-                      <DatePicker bind:value={payDate} name="date" />
-                      <div class="flex-1 min-w-0">
-                        <Combobox
-                          items={data.paymentAccounts}
-                          value={payAccount}
+                          <input type="hidden" name="docPath" value={file.relPath} />
+                          <DatePicker bind:value={payDate} name="date" />
+                          <div class="flex-1 min-w-0">
+                            <Combobox
+                              items={data.paymentAccounts}
+                              value={payAccount}
                           onchange={(val) => { payAccount = val; }}
-                          name="paymentAccount"
-                          placeholder="Payment account…"
-                          inputClass="w-full border border-slate-300 rounded-lg bg-slate-900 px-2 py-1.5 pr-6 font-mono text-sm text-slate-100 placeholder:text-slate-100 focus:border-blue-300 outline-none"
-                        />
-                      </div>
-                      <span class="shrink-0 font-mono text-sm text-slate-100">{txn?.amount ? fmtAmount(txn.amount) : ''}</span>
+                              name="paymentAccount"
+                              placeholder="Payment account…"
+                              inputClass="w-full border border-slate-300 rounded-lg bg-slate-900 px-2 py-1.5 pr-6 font-mono text-sm text-slate-100 placeholder:text-slate-100 focus:border-blue-300 outline-none"
+                            />
+                          </div>
+                          <span class="shrink-0 font-mono text-sm text-slate-100">{txn?.amount ? fmtAmount(txn.amount) : ''}</span>
                       <button type="submit" disabled={paySubmitting}
                         class="btn-primary">
                         {paySubmitting ? '…' : 'Record'}
                       </button>
                       <button type="button" onclick={() => { payingDocPath = null; payError = ''; }}
                         class="btn-cancel">Cancel</button>
-                    </form>
-                    {#if payError}
-                      <p class="text-xs text-rose-400">{payError}</p>
+                        </form>
+                        {#if payError}
+                          <p class="text-xs text-rose-400">{payError}</p>
+                        {/if}
+                      </div>
                     {/if}
-                  </div>
-                {/if}
 
-                <a
+                    <a
                   href={file.ext === 'csv' ? `/docs/csv?p=${encodeURIComponent(file.relPath)}` : fileUrl(file.relPath)}
                   download={!['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? file.name : undefined}
                   class="rounded-md border border-slate-300 px-2.5 py-1 text-xs text-slate-100 transition-colors hover:border-slate-400 hover:text-slate-100">
                   {['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'txt', 'csv'].includes(file.ext) ? 'View' : 'Download'}
-                </a>
-                <button
-                  type="button"
+                    </a>
+                    <button
+                      type="button"
                   onclick={() => { deletingFile = { name: file.name, relPath: file.relPath }; showDeleteConfirm = true; }}
-                  class="rounded-md border border-rose-500/40 px-2.5 py-1 text-xs text-rose-400 transition-colors hover:bg-rose-500/20"
-                >Delete</button>
+                      class="rounded-md border border-rose-500/40 px-2.5 py-1 text-xs text-rose-400 transition-colors hover:bg-rose-500/20"
+                    >Delete</button>
+                  </div>
+                {/each}
               </div>
             {/each}
-          </div>
-        {/each}
-      {/if}
-      </div>
-    {/each}
-  </div>
-{/if}
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
 
-<!-- Delete confirmation -->
-<AlertDialog.Root bind:open={showDeleteConfirm}>
-  <AlertDialog.Portal>
-    <AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/60" />
+  <!-- Delete confirmation -->
+  <AlertDialog.Root bind:open={showDeleteConfirm}>
+    <AlertDialog.Portal>
+      <AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/60" />
     <AlertDialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-300 bg-slate-900 p-6 shadow-2xl">
       <AlertDialog.Title class="mb-2 text-base font-semibold text-slate-100">Delete file?</AlertDialog.Title>
       <AlertDialog.Description class="mb-5 text-sm text-slate-100">
         "{deletingFile?.name}" will be permanently removed.
       </AlertDialog.Description>
-      <div class="flex justify-end gap-3">
+        <div class="flex justify-end gap-3">
         <AlertDialog.Cancel class="btn-cancel">
           Cancel
         </AlertDialog.Cancel>
-        <button
-          type="button"
-          class="btn-primary bg-rose-500 hover:bg-rose-600 hover:opacity-100"
-          onclick={async () => {
-            if (!deletingFile) return;
-            const fd = new FormData();
-            fd.set('relPath', deletingFile.relPath);
-            const res = await fetch('?/deleteDoc', { method: 'POST', body: fd });
+          <button
+            type="button"
+            class="btn-primary bg-rose-500 hover:bg-rose-600 hover:opacity-100"
+            onclick={async () => {
+              if (!deletingFile) return;
+              const fd = new FormData();
+              fd.set('relPath', deletingFile.relPath);
+              const res = await fetch('?/deleteDoc', { method: 'POST', body: fd });
             if (res.ok) { invalidateAll(); }
-            showDeleteConfirm = false;
-            deletingFile = null;
-          }}
-        >Delete</button>
-      </div>
-    </AlertDialog.Content>
-  </AlertDialog.Portal>
-</AlertDialog.Root>
+              showDeleteConfirm = false;
+              deletingFile = null;
+            }}
+          >Delete</button>
+        </div>
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog.Root>
 
 {/if}
-

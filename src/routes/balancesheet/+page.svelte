@@ -1,22 +1,22 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import Chart from '$lib/Chart.svelte';
-  import { theme } from '$lib/theme.svelte.js';
+  import Chart from '#lib/Chart.svelte';
+  import { theme } from '#lib/theme.svelte.js';
   import { goto } from '$app/navigation';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import MonthlyReportTable from '$lib/components/MonthlyReportTable.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import MonthlyReportTable from '#lib/components/MonthlyReportTable.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data }: { data: PageData } = $props();
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(n, displayFmt);
     if (showSymbol) return full;
@@ -31,22 +31,39 @@
   }
 
   // Derive table sections from multi-month data
-  const mmAssetRows = $derived(mm?.accounts.filter(a => a.type === 'asset') ?? []);
-  const mmLiabRows = $derived(mm?.accounts.filter(a => a.type === 'liability') ?? []);
+  const mmAssetRows = $derived(mm?.accounts.filter((a) => a.type === 'asset') ?? []);
+  const mmLiabRows = $derived(mm?.accounts.filter((a) => a.type === 'liability') ?? []);
   const mmAssetTotals = $derived(mm?.assetTotals ?? []);
   const mmLiabTotals = $derived(mm?.liabTotals ?? []);
 
-  const tableSections = $derived(mm ? [
-    { account: 'assets', rows: mmAssetRows, totals: mmAssetTotals, amountColor: 'text-blue-500' },
-    { account: 'liabilities', rows: mmLiabRows, totals: mmLiabTotals, amountColor: 'text-rose-400' },
-  ] : []);
+  const tableSections = $derived(mm
+    ? [
+      {
+        account: 'assets',
+        rows: mmAssetRows,
+        totals: mmAssetTotals,
+        amountColor: 'text-blue-500'
+      },
 
-  const tableFooter = $derived(mm ? { label: 'Net Worth', amounts: mm.netWorths } : undefined);
+      {
+        account: 'liabilities',
+        rows: mmLiabRows,
+        totals: mmLiabTotals,
+        amountColor: 'text-rose-400'
+      }
+    ]
+    : []);
+
+  const tableFooter = $derived(mm
+    ? { label: 'Net Worth', amounts: mm.netWorths }
+    : undefined);
+
   const heroNetWorth = $derived(mm?.netWorths?.at(-1) ?? data.netWorth);
 
   // Chart
-  const chartLabels = $derived(mm ? mm.months : data.history.map(d => d.month));
-  const chartData = $derived(mm ? mm.netWorths : data.history.map(d => d.netWorth));
+  const chartLabels = $derived(mm ? mm.months : data.history.map((d) => d.month));
+
+  const chartData = $derived(mm ? mm.netWorths : data.history.map((d) => d.netWorth));
 
   const netWorthChartConfig = $derived({
     type: 'line' as const,
@@ -100,8 +117,21 @@
 </LearningBanner>
 
 <div class="mb-6 flex items-center justify-between">
-  <h1 class="text-xl font-semibold text-slate-100 flex items-center gap-2">Balance Sheet <span class="text-sm font-normal text-slate-100">net worth = </span><AccountBadge account="assets" size="lg" /> <span class="text-slate-100">&minus;</span> <AccountBadge account="liabilities" size="lg" /></h1>
-  <MonthSelector value={monthCount} options={[1, 3, 6, 12, 0]} onchange={setMonths} />
+  <h1
+    class="text-xl font-semibold text-slate-100 flex items-center gap-2"
+  >
+    Balance Sheet 
+    <span class="text-sm font-normal text-slate-100">net worth =</span>
+    <AccountBadge account="assets" size="lg" />
+    <span class="text-slate-100">−</span>
+    <AccountBadge account="liabilities" size="lg" />
+  </h1>
+
+  <MonthSelector
+    value={monthCount}
+    options={[1, 3, 6, 12, 0]}
+    onchange={setMonths}
+  />
 </div>
 
 {#if monthCount <= 1}

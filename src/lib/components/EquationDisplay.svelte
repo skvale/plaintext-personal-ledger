@@ -1,5 +1,5 @@
 <script lang="ts">
-  import AccountTypeBadge from '$lib/components/AccountTypeBadge.svelte';
+  import AccountTypeBadge from '#lib/components/AccountTypeBadge.svelte';
 
   interface Props {
     values?: {

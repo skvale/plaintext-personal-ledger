@@ -1,14 +1,14 @@
 <script lang="ts">
-  import Chart from '$lib/Chart.svelte';
+  import Chart from '#lib/Chart.svelte';
   import { goto } from '$app/navigation';
-  import { theme } from '$lib/theme.svelte.js';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import TransactionRow from '$lib/components/TransactionRow.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import { theme } from '#lib/theme.svelte.js';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import TransactionRow from '#lib/components/TransactionRow.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data } = $props();
 
@@ -18,10 +18,10 @@
     goto(`/portfolio?months=${n}`, { replaceState: true, noScroll: true });
   }
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
@@ -44,7 +44,7 @@
 
   function fmtPct(n: number, base: number) {
     if (base === 0) return '0%';
-    const pct = (n / base) * 100;
+    const pct = n / base * 100;
     return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
   }
 
@@ -75,7 +75,14 @@
   const accountGains = $derived(data.accounts.map((a: any) => {
     const cost = costMap.get(a.name) ?? 0;
     const gain = a.balance - cost;
-    return { name: a.name, market: a.balance, cost, gain, pct: cost > 0 ? (gain / cost) * 100 : 0 };
+
+    return {
+      name: a.name,
+      market: a.balance,
+      cost,
+      gain,
+      pct: cost > 0 ? gain / cost * 100 : 0
+    };
   }));
   const gainMap = $derived(new Map(accountGains.map((g: any) => [g.name, g])));
 
@@ -242,7 +249,7 @@
       <p class="mb-4 text-xs font-semibold tracking-wide text-slate-100">Accounts</p>
       <div class="flex flex-col gap-3">
         {#each data.accounts as acct}
-          {@const pct = totalValue > 0 ? Math.round((acct.balance / totalValue) * 100) : 0}
+          {@const pct = totalValue > 0 ? Math.round(acct.balance / totalValue * 100) : 0}
           {@const g = gainMap.get(acct.name)}
           <div class="group relative">
             <div class="mb-1 flex items-center justify-between">
@@ -310,7 +317,9 @@
             description={txn.description}
             account={investPosting?.account}
             amount={investTotal}
-            href={(txn.txid || txn.tindex) ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/portfolio')}` : undefined}
+            href={txn.txid || txn.tindex
+              ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/portfolio')}`
+              : undefined}
             signed
           />
         {/each}

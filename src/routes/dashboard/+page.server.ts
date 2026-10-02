@@ -7,7 +7,7 @@ import {
   getNetWorthHistory,
   getMonthlyIncome,
   lastNMonths
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url, parent }) => {
   const month = url.searchParams.get('month') ?? null;

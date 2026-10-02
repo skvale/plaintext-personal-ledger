@@ -1,10 +1,10 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import type { PageData, ActionData } from './$types';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import { accountTail, accountColor } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import { accountTail, accountColor } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 

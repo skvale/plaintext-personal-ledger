@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { checkJournal, JOURNAL } from '$lib/hledger.server.js';
+import { checkJournal, JOURNAL } from '#lib/hledger.server.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import type { PageServerLoad, Actions } from './$types';
 

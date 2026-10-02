@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { writeFile } from 'node:fs/promises';
-import { getSettings, SETTINGS_FILE } from '$lib/hledger.server.js';
+import { getSettings, SETTINGS_FILE } from '#lib/hledger.server.js';
 import type { RequestHandler } from './$types.js';
 
 export const POST: RequestHandler = async ({ request }) => {

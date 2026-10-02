@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { addAccountDeclaration } from '$lib/hledger.server.js';
+import { addAccountDeclaration } from '#lib/hledger.server.js';
 import type { RequestHandler } from './$types.js';
 
 export const POST: RequestHandler = async ({ request }) => {

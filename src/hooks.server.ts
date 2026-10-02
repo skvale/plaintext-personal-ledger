@@ -1,5 +1,5 @@
-import type { Handle } from '@sveltejs/kit';
-import { startWatcher } from '$lib/watcher.server.js';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { startWatcher } from '#lib/watcher.server.js';
 
 startWatcher().catch(console.error);
 

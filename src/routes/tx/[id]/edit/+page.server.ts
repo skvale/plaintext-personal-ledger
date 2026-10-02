@@ -6,7 +6,7 @@ import {
   getAccountNames,
   getVendors,
   addAccountDeclaration
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   const ref = url.searchParams.get('ref') ?? '/register';

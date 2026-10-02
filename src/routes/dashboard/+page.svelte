@@ -1,17 +1,17 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import Chart from '$lib/Chart.svelte';
+  import Chart from '#lib/Chart.svelte';
   import { goto } from '$app/navigation';
-  import { theme } from '$lib/theme.svelte.js';
+  import { theme } from '#lib/theme.svelte.js';
   import { onMount } from 'svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import PeriodStepper from '$lib/components/PeriodStepper.svelte';
-  import TransactionRow from '$lib/components/TransactionRow.svelte';
-  import Amount from '$lib/components/Amount.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import { accountColor } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import PeriodStepper from '#lib/components/PeriodStepper.svelte';
+  import TransactionRow from '#lib/components/TransactionRow.svelte';
+  import Amount from '#lib/components/Amount.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import { accountColor } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -44,15 +44,15 @@
 
   const displayMonth = $derived(
     (() => {
-      const d = activeMonth ? parseYM(activeMonth) : today;
-      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const d = activeMonth ? parseYM(activeMonth) : today;
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     })()
   );
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
@@ -71,11 +71,11 @@
     return amount > 0 ? 'glow-rose' : 'glow-emerald';
   }
 
-    const savingsRate = $derived.by(() => {
-      const { income, expenses } = data.monthSummary;
-      const net = income - expenses;
-      return income === 0 ? 0 : Math.round((net / income) * 100);
-    });
+  const savingsRate = $derived.by(() => {
+    const { income, expenses } = data.monthSummary;
+    const net = income - expenses;
+    return income === 0 ? 0 : Math.round(net / income * 100);
+  });
 
   // Learning mode
   const learningEnabled = $derived(data.settings?.learning?.enabled ?? false);
@@ -93,9 +93,7 @@
   // Sparkline data from monthly history
   const incomeSparkline = $derived(data.monthlyHistory?.map((m: any) => m.income) ?? []);
   const expenseSparkline = $derived(data.monthlyHistory?.map((m: any) => m.expenses) ?? []);
-  const savingsSparkline = $derived(
-    data.monthlyHistory?.map((m: any) => m.income > 0 ? ((m.income - m.expenses) / m.income) * 100 : 0) ?? []
-  );
+  const savingsSparkline = $derived(data.monthlyHistory?.map((m: any) => m.income > 0 ? (m.income - m.expenses) / m.income * 100 : 0) ?? []);
   const netWorthSparkline = $derived((data.netWorthHistory ?? []).slice(-6).map((h: any) => h.netWorth));
 
   // Draw a mini sparkline on a canvas
@@ -124,9 +122,9 @@
     ctx.moveTo(0, h);
     values.forEach((v, i) => {
       const x = i * step;
-      const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
-      if (i === 0) ctx.lineTo(x, y);
-      else ctx.lineTo(x, y);
+      const y = h - (v - min) / range * h * 0.8 - h * 0.1;
+
+      if (i === 0) ctx.lineTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.lineTo(w, h);
     ctx.closePath();
@@ -137,9 +135,9 @@
     ctx.beginPath();
     values.forEach((v, i) => {
       const x = i * step;
-      const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const y = h - (v - min) / range * h * 0.8 - h * 0.1;
+
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
@@ -230,8 +228,8 @@
     {#if data.expenseCategories && data.expenseCategories.length > 0}
       <div class="flex flex-col gap-2.5">
         {#each data.expenseCategories as cat, i}
-          {@const pct = expenseTotal !== 0 ? (cat.amount / Math.abs(expenseTotal) * 100) : 0}
-          {@const barPct = (Math.abs(cat.amount) / maxExpense) * 100}
+          {@const pct = expenseTotal !== 0 ? cat.amount / Math.abs(expenseTotal) * 100 : 0}
+          {@const barPct = Math.abs(cat.amount) / maxExpense * 100}
           {@const isNet = cat.amount < 0}
           <div class="flex items-center gap-2.5">
             <div class="group/cat relative shrink-0">
@@ -272,7 +270,9 @@
               account={txn.account}
               postings={txn.postings}
               amount={txn.amount ?? 0}
-              href={(txn.txid || txn.tindex) ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/dashboard')}` : undefined}
+              href={txn.txid || txn.tindex
+                ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/dashboard')}`
+                : undefined}
             />
           </div>
         {/each}

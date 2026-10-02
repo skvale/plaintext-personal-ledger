@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getTransactionForEdit } from '$lib/hledger.server.js';
+import { getTransactionForEdit } from '#lib/hledger.server.js';
 
 // Legacy redirect: /edit/123 → /tx/123 (or /tx/<txid> if available)
 export const load: PageServerLoad = async ({ params, url }) => {

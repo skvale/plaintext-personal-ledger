@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { accountTypeBadgeColors } from '$lib/account-colors.js';
+  import { accountTypeBadgeColors } from '#lib/account-colors.js';
 
   interface Props {
     type: string;

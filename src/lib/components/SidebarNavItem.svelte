@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { useSortable } from '@dnd-kit-svelte/sortable';
   import { CSS, styleObjectToString } from '@dnd-kit-svelte/utilities';
 
@@ -27,7 +27,12 @@
   );
 </script>
 
-<div class="relative" bind:this={node.current} {style} {...attributes.current}>
+<div
+  class="relative"
+  bind:this={node.current}
+  style={style}
+  {...attributes.current}
+>
   {#if item.kind === 'divider'}
     <div class="divider-gradient mx-3 my-1 cursor-grab {isDragging.current ? 'invisible' : ''}" {...listeners.current}></div>
     {#if isDragging.current}
@@ -44,12 +49,15 @@
       onclick={() => onsidebarclose?.()}
       class="relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium
         {isDragging.current ? 'invisible' : ''}
-{$page.url.pathname === item.href || (item.href !== '/' && $page.url.pathname.startsWith(item.href + '/'))
-          ? 'text-blue-400'
-          : 'text-slate-100 hover:bg-slate-800 hover:text-slate-100'}"
+{page.url.pathname === item.href || item.href !== '/' && page.url.pathname.startsWith(item.href + '/')
+        ? 'text-blue-400'
+        : 'text-slate-100 hover:bg-slate-800 hover:text-slate-100'}"
     >
-      {#if ($page.url.pathname === item.href || (item.href !== '/' && $page.url.pathname.startsWith(item.href + '/'))) && !isDragging.current}
-        <div class="absolute inset-0 rounded-md bg-blue-400/10" style="view-transition-name: nav-pill;"></div>
+      {#if (page.url.pathname === item.href || item.href !== '/' && page.url.pathname.startsWith(item.href + '/')) && !isDragging.current}
+        <div
+          class="absolute inset-0 rounded-md bg-blue-400/10"
+          style="view-transition-name: nav-pill;"
+        ></div>
       {/if}
       <span class="relative text-sm text-slate-100 cursor-grab hover:text-slate-100 select-none" {...listeners.current}>⠿</span>
       <span class="relative w-4 text-center text-sm">{item.icon}</span>

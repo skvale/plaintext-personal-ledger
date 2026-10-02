@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getMonthlyIncome, getIncomeStatementDetail, getMultiMonthPnL } from '$lib/hledger.server.js';
+import { getMonthlyIncome, getIncomeStatementDetail, getMultiMonthPnL } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const from = url.searchParams.get('from') ?? '';

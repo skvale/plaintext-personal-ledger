@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getVendors, getVendorsMultiMonth } from '$lib/hledger.server.js';
+import { getVendors, getVendorsMultiMonth } from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async ({ url }) => {
   const monthCount = parseInt(url.searchParams.get('months') ?? '1');

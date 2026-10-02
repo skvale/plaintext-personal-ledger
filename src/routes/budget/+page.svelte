@@ -1,13 +1,13 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import { accountTail, accountColor } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import { accountTail, accountColor } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   function focus(el: HTMLElement) {
     el.focus();
@@ -29,10 +29,10 @@
     { value: 'ytd', label: 'Year to date' }
   ];
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(n, displayFmt);
     if (showSymbol) return full;
@@ -41,7 +41,7 @@
 
   function pct(actual: number, budget: number) {
     if (budget <= 0) return 0;
-    return Math.min(100, Math.round((actual / budget) * 100));
+    return Math.min(100, Math.round(actual / budget * 100));
   }
 
   function barColor(actual: number, budget: number) {

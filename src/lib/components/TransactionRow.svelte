@@ -1,9 +1,9 @@
 <script lang="ts">
-  import AccountLabel from '$lib/components/AccountLabel.svelte';
-  import Amount from '$lib/components/Amount.svelte';
-  import { amountColor, accountSortKey, accountColor, accountDotClass } from '$lib/account-colors.js';
-  import { parseCommodity, formatAmount, parseCommodityFromSymbol } from '$lib/format.js';
-  import { page } from '$app/stores';
+  import AccountLabel from '#lib/components/AccountLabel.svelte';
+  import Amount from '#lib/components/Amount.svelte';
+  import { amountColor, accountSortKey, accountColor, accountDotClass } from '#lib/account-colors.js';
+  import { parseCommodity, formatAmount, parseCommodityFromSymbol } from '#lib/format.js';
+  import { page } from '$app/state';
 
   let {
     date,
@@ -28,18 +28,19 @@
   }
 
   const sorted = $derived([...postings].sort((a, b) => accountSortKey(a.account) - accountSortKey(b.account)));
-  const posPostings = $derived(postings.filter(p => p.amount > 0));
-  const amtAccount = $derived(
-    posPostings.length === 1 ? posPostings[0].account
-    : posPostings.length > 1 ? (posPostings.find(p => p.account.startsWith('expenses') || p.account.startsWith('income'))?.account ?? posPostings[0].account)
-    : (account ?? sorted[0]?.account ?? '')
-  );
-  const amtColor = $derived(amountColor(amount, amtAccount, postings));
+  const posPostings = $derived(postings.filter((p) => p.amount > 0));
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const amtAccount = $derived(posPostings.length === 1
+    ? posPostings[0].account
+    : posPostings.length > 1
+      ? posPostings.find((p) => p.account.startsWith('expenses') || p.account.startsWith('income'))?.account ?? posPostings[0].account
+      : account ?? sorted[0]?.account ?? '');
+
+  const amtColor = $derived(amountColor(amount, amtAccount, postings));
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
 
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
@@ -49,7 +50,7 @@
 </script>
 
 <a
-  {href}
+  href={href}
   class="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-800/60"
 >
   <div class="min-w-0 flex-1 overflow-hidden">

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import Amount from '$lib/components/Amount.svelte';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import { page } from '$app/stores';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import Amount from '#lib/components/Amount.svelte';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import { page } from '$app/state';
 
   interface Section {
     account: string;            // e.g. 'assets', 'income'
@@ -26,10 +26,10 @@
     totalsColumn?: boolean;
   } = $props();
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
@@ -115,7 +115,16 @@
           <tr class="border-b border-black/[0.08] dark:border-white/[0.06] cursor-pointer" onclick={() => toggle(section.account)}>
             <td class="px-5 py-2.5 sticky left-0 bg-slate-900 z-10">
               <span class="inline-flex items-center gap-2">
-                <svg class="h-4 w-4 text-slate-100 transition-transform {isExpanded(section.account) ? 'rotate-90' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg
+                  class="h-4 w-4 text-slate-100 transition-transform {isExpanded(section.account) ? 'rotate-90' : ''}"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ><polyline points="9 18 15 12 9 6"></polyline></svg>
+
                 <AccountBadge account={section.account} />
               </span>
             </td>
@@ -135,12 +144,12 @@
           {#if isExpanded(section.account)}
             {#each section.rows as row}
               {@const parts = row.name.split(':')}
-              {@const hasChildren = section.rows.some(r => r.name.startsWith(row.name + ':'))}
+              {@const hasChildren = section.rows.some((r) => r.name.startsWith(row.name + ':'))}
               {@const sectionPrefix = section.account + ':'}
               {@const findParent = (pts: string[]): number => {
                 for (let i = pts.length - 2; i >= 1; i--) {
                   const parent = sectionPrefix + pts.slice(1, i + 1).join(':');
-                  if (section.rows.some(r => r.name === parent)) return i;
+                  if (section.rows.some((r) => r.name === parent)) return i;
                 }
                 return -1;
               }}
@@ -154,7 +163,15 @@
                   <td class="px-5 py-2.5 whitespace-nowrap sticky left-0 bg-slate-900 z-10" style="padding-left: {20 + indent * 16}px">
                     <span class="inline-flex items-center gap-1.5">
                       {#if hasChildren}
-                        <svg class="h-3 w-3 shrink-0 text-slate-400 transition-transform {isSubCollapsed(row.name) ? '' : 'rotate-90'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        <svg
+                          class="h-3 w-3 shrink-0 text-slate-400 transition-transform {isSubCollapsed(row.name) ? '' : 'rotate-90'}"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ><polyline points="9 18 15 12 9 6"></polyline></svg>
                       {:else}
                         <span class="h-3 w-3 shrink-0"></span>
                       {/if}

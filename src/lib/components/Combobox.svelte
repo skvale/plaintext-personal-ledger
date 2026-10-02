@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Combobox } from 'bits-ui';
-  import { accountColor, accountWithoutType } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import AccountLabel from '$lib/components/AccountLabel.svelte';
+  import { accountColor, accountWithoutType } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import AccountLabel from '#lib/components/AccountLabel.svelte';
 
   interface Props {
     items: string[];

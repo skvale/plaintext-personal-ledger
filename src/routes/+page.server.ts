@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { getSettings } from '$lib/hledger.server.js';
+import { getSettings } from '#lib/hledger.server.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

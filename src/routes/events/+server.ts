@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { addClient } from '$lib/watcher.server.js';
+import { addClient } from '#lib/watcher.server.js';
 
 export const GET: RequestHandler = () => {
   let removeClient: (() => void) | undefined;

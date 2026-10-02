@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getTransactions, getUsedAccountNames, getTransactionDocs } from '$lib/hledger.server.js';
+import { getTransactions, getUsedAccountNames, getTransactionDocs } from '#lib/hledger.server.js';
 
 function thisMonthStart() {
   const d = new Date();

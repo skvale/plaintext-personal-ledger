@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { STATEMENTS_DIR } from '$lib/hledger.server.js';
+import { STATEMENTS_DIR } from '#lib/hledger.server.js';
 import { join, resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { PageServerLoad } from './$types';

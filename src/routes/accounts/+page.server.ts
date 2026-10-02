@@ -8,7 +8,7 @@ import {
   deleteAccountDeclaration,
   normalizeAccountName,
   MAIN_JOURNAL
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 
 export const load: PageServerLoad = async () => {
   const [declared, used, descriptions] = await Promise.all([

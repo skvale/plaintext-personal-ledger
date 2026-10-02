@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { accountType, accountBadgeClass } from '$lib/account-colors.js';
+  import { accountType, accountBadgeClass } from '#lib/account-colors.js';
 
   let {
     account,

@@ -9,7 +9,7 @@ import {
   populatePricesForDate,
   SETTINGS_FILE,
   getSettings,
-} from "$lib/hledger.server.js";
+} from "#lib/hledger.server.js";
 
 export const load: PageServerLoad = async () => {
   const [raw, settings] = await Promise.all([

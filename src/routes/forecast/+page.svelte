@@ -2,16 +2,16 @@
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
-  import type { ForecastTransaction, RecurringRule } from '$lib/hledger.server.js';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import Combobox from '$lib/components/Combobox.svelte';
-  import DatePicker from '$lib/components/DatePicker.svelte';
-  import { accountTail, accountColor, amountColor } from '$lib/account-colors.js';
-  import AccountBadge from '$lib/components/AccountBadge.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
-  import Amount from '$lib/components/Amount.svelte';
+  import type { ForecastTransaction, RecurringRule } from '#lib/hledger.server.js';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import Combobox from '#lib/components/Combobox.svelte';
+  import DatePicker from '#lib/components/DatePicker.svelte';
+  import { accountTail, accountColor, amountColor } from '#lib/account-colors.js';
+  import AccountBadge from '#lib/components/AccountBadge.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
+  import Amount from '#lib/components/Amount.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -36,17 +36,14 @@
     updateRule = false;
   }
 
-  const amountChanged = $derived(
-    editTx && originalTx &&
-    editTx.postings.some((p, i) => !p.auto && p.amount !== originalTx!.postings[i]?.amount)
-  );
+  const amountChanged = $derived(editTx && originalTx && editTx.postings.some((p, i) => !p.auto && p.amount !== (originalTx!).postings[i]?.amount));
 
   function cancelEdit() { editingIdx = null; editTx = null; }
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmtCurrency(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
@@ -102,9 +99,8 @@
 
     for (const tx of data.transactions) {
       const idx = data.transactions.indexOf(tx);
-      const funding = tx.postings.find(p =>
-        p.account.startsWith('assets') || p.account.startsWith('liabilities')
-      );
+      const funding = tx.postings.find((p) => p.account.startsWith('assets') || p.account.startsWith('liabilities'));
+
       if (!funding) continue;
 
       const acct = funding.account;
@@ -118,16 +114,16 @@
     return status;
   });
 
-  const shortfallCount = $derived([...fundingStatus.values()].filter(s => s.shortfall).length);
+  const shortfallCount = $derived([...fundingStatus.values()].filter((s) => s.shortfall).length);
 
   const monthlyExpenseRate = $derived(
     forecastTotals.totalExpenses > 0 && data.transactions.length > 0
-      ? forecastTotals.totalExpenses / months
-      : data.currentMonth.expenses || 0
-  );
-  const runwayMonths = $derived(
-    monthlyExpenseRate > 0 ? Math.floor(data.netWorth / monthlyExpenseRate) : Infinity
-  );
+    ? forecastTotals.totalExpenses / months
+    : data.currentMonth.expenses || 0);
+
+  const runwayMonths = $derived(monthlyExpenseRate > 0
+    ? Math.floor(data.netWorth / monthlyExpenseRate)
+    : Infinity);
 
   function fmtMonth(ym: string) {
     const [y, m] = ym.split('-').map(Number);
@@ -248,13 +244,13 @@
 <div class="mb-5 flex gap-1 rounded-lg border border-slate-400 bg-slate-900 p-1">
   <button
     type="button"
-    onclick={() => (activeTab = 'forecast')}
+    onclick={() => activeTab = 'forecast'}
     class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors
       {activeTab === 'forecast' ? 'bg-slate-800 text-slate-100' : 'text-slate-100 hover:text-slate-100'}"
   >Forecast</button>
   <button
     type="button"
-    onclick={() => (activeTab = 'rules')}
+    onclick={() => activeTab = 'rules'}
     class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors
       {activeTab === 'rules' ? 'bg-slate-800 text-slate-100' : 'text-slate-100 hover:text-slate-100'}"
   >Rules</button>
@@ -279,7 +275,15 @@
     <div class="rounded-xl border border-slate-400 bg-slate-900 px-6 py-12 text-center">
       <p class="text-lg text-slate-100">No upcoming transactions</p>
       <p class="mt-2 text-sm text-slate-100">
-        Set up bills, subscriptions, or paychecks in the <button type="button" onclick={() => (activeTab = 'rules')} class="text-blue-500 hover:underline">Rules</button> tab and they'll appear here as a preview of what's coming.
+        Set up bills, subscriptions, or paychecks in the 
+
+        <button
+          type="button"
+          onclick={() => activeTab = 'rules'}
+          class="text-blue-500 hover:underline"
+        >Rules</button>
+
+        tab and they'll appear here as a preview of what's coming.
       </p>
       <button type="button" onclick={() => { activeTab = 'rules'; addingRule = true; }}
         class="mt-5 btn-pill">
@@ -336,7 +340,10 @@
                 <span class="text-rose-400">−{fmtCurrency(proj.expenses)}</span>
               {/if}
               <span class="text-slate-100">→</span>
-              <span class="{proj.projectedBalance >= 0 ? 'text-slate-100' : 'text-rose-400'}">{fmtCurrency(proj.projectedBalance)}</span>
+
+              <span
+                class={proj.projectedBalance >= 0 ? 'text-slate-100' : 'text-rose-400'}
+              >{fmtCurrency(proj.projectedBalance)}</span>
             </div>
           </div>
           <table class="w-full text-sm table-fixed">
@@ -360,43 +367,43 @@
               {#each proj.txns as { tx, idx }}
                 {#if editingIdx === idx && editTx}
                   <tr class="border-b border-slate-400/60"><td colspan="5" class="px-5 py-4">
-                    <div class="mb-3 flex items-center gap-3">
-                      <span class="font-mono text-sm text-slate-100">{editTx.date}</span>
-                      <span class="text-sm font-medium text-slate-100">{editTx.description || '(recurring)'}</span>
-                    </div>
-                    <div class="mb-3 flex flex-col gap-2 pl-2">
-                      {#each editTx.postings as posting, pi}
-                        <div class="flex items-center gap-3">
-                          <div class="flex flex-1 items-center">
-                            <AccountBadge account={posting.account} />
+                      <div class="mb-3 flex items-center gap-3">
+                        <span class="font-mono text-sm text-slate-100">{editTx.date}</span>
+                        <span class="text-sm font-medium text-slate-100">{editTx.description || '(recurring)'}</span>
+                      </div>
+                      <div class="mb-3 flex flex-col gap-2 pl-2">
+                        {#each editTx.postings as posting, pi}
+                          <div class="flex items-center gap-3">
+                            <div class="flex flex-1 items-center">
+                              <AccountBadge account={posting.account} />
                             <span class="font-mono text-sm {accountColor(posting.account)}">{accountTail(posting.account)}</span>
-                          </div>
-                          {#if posting.auto}
+                            </div>
+                            {#if posting.auto}
                             <span class="w-28 text-right font-mono text-sm text-slate-100">auto</span>
-                          {:else}
-                            <input
-                              type="text"
-                              value={fmt(posting.amount)}
-                              oninput={(e) => {
-                                const v = parseFloat((e.target as HTMLInputElement).value.replace(/[$,]/g, ''));
-                                if (!isNaN(v) && editTx) editTx.postings[pi].amount = v;
-                              }}
-                              class="w-28 rounded border border-slate-300 bg-slate-900 px-2 py-1 text-right font-mono text-sm text-slate-100 outline-none focus:border-blue-300"
-                            />
-                          {/if}
-                        </div>
-                      {/each}
-                    </div>
+                            {:else}
+                              <input
+                                type="text"
+                                value={fmt(posting.amount)}
+                                oninput={(e) => {
+                                  const v = parseFloat((e.target as HTMLInputElement).value.replace(/[$,]/g, ''));
+                                  if (!isNaN(v) && editTx) editTx.postings[pi].amount = v;
+                                }}
+                                class="w-28 rounded border border-slate-300 bg-slate-900 px-2 py-1 text-right font-mono text-sm text-slate-100 outline-none focus:border-blue-300"
+                              />
+                            {/if}
+                          </div>
+                        {/each}
+                      </div>
                     <form method="POST" action="?/materialize" use:enhance={materializeEnhance} class="flex flex-col gap-2">
                       <input type="hidden" name="transactions" value={JSON.stringify([editTx])} />
                       <input type="hidden" name="updateRule" value={String(updateRule)} />
-                      {#if amountChanged}
+                        {#if amountChanged}
                         <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-100">
                           <input type="checkbox" bind:checked={updateRule} class="accent-blue-400" />
-                          Update recurring rule with new amount
-                        </label>
-                      {/if}
-                      <div class="flex items-center gap-2">
+                            Update recurring rule with new amount
+                          </label>
+                        {/if}
+                        <div class="flex items-center gap-2">
                         <button type="submit" disabled={materializing}
                           class="rounded-md bg-amber-500/20 px-3 py-1.5 text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-500/30 disabled:opacity-40">
                           {materializing ? 'Saving…' : 'Materialize'}
@@ -405,14 +412,14 @@
                           class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-100 hover:text-slate-100">
                           Cancel
                         </button>
-                        {#if form?.error}
-                          <span class="text-sm text-rose-400">{form.error}</span>
-                        {/if}
-                      </div>
-                    </form>
+                          {#if form?.error}
+                            <span class="text-sm text-rose-400">{form.error}</span>
+                          {/if}
+                        </div>
+                      </form>
                   </td></tr>
                 {:else}
-                  {@const primary = tx.postings.find(p => !p.auto)}
+                  {@const primary = tx.postings.find((p) => !p.auto)}
                   {@const fs = fundingStatus.get(idx)}
                   <tr class="border-b border-slate-400/60 last:border-0 transition-colors
                     {fs?.shortfall ? 'bg-rose-500/5 hover:bg-rose-500/10' : 'hover:bg-slate-800/40'}">
@@ -425,14 +432,17 @@
                     </td>
                     <td class="px-3 py-2 truncate">
                       {#if primary}
-                        <span class="inline-flex items-center font-mono text-xs"><AccountBadge account={primary.account} /><span class="{accountColor(primary.account)}">{accountTail(primary.account)}</span></span>
+                        <span class="inline-flex items-center font-mono text-xs">
+                          <AccountBadge account={primary.account} />
+                          <span class={accountColor(primary.account)}>{accountTail(primary.account)}</span>
+                        </span>
                       {/if}
                     </td>
                     <td class="px-3 py-2 truncate">
                       {#if fs}
                         <div class="flex items-center font-mono text-xs">
                           <AccountBadge account={fs.fundingAccount} />
-                          <span class="{accountColor(fs.fundingAccount)}">{accountTail(fs.fundingAccount)}</span>
+                          <span class={accountColor(fs.fundingAccount)}>{accountTail(fs.fundingAccount)}</span>
                         </div>
                         <span class="text-xs {fs.shortfall ? 'text-rose-400' : 'text-slate-100'}">
                           {fs.shortfall ? '⚠ ' : ''}{fmtCurrency(fs.balanceAfter)} after
@@ -484,8 +494,8 @@
       {/if}
       <button
         type="button"
-        onclick={() => (addingRule = !addingRule)}
-        class="{addingRule ? 'btn-pill-active' : 'btn-pill'}"
+        onclick={() => addingRule = !addingRule}
+        class={addingRule ? 'btn-pill-active' : 'btn-pill'}
       >+ New rule</button>
     </div>
   </div>
@@ -528,8 +538,12 @@
                     inputClass="w-full rounded-lg border border-slate-300 bg-slate-900 px-3 pr-8 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300"
                   />
                 </div>
-                <input type="text"
-                  placeholder={i === autoBalanceIdx ? (explicitTotal !== 0 ? `≈ $${(-explicitTotal).toFixed(2)}` : 'auto') : ''}
+
+                <input
+                  type="text"
+                  placeholder={i === autoBalanceIdx
+                    ? explicitTotal !== 0 ? `≈ $${(-explicitTotal).toFixed(2)}` : 'auto'
+                    : ''}
                   bind:value={posting.amount}
                   class="w-28 rounded-lg border border-slate-300 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100 outline-none placeholder:text-slate-100 focus:border-blue-300" />
                 <button type="button" onclick={() => removeNewPosting(i)} disabled={newPostings.length <= 2}
@@ -547,7 +561,12 @@
 
         <div class="flex gap-2">
           <button type="submit" class="btn-primary">Save Rule</button>
-          <button type="button" onclick={() => (addingRule = false)} class="btn-cancel">Cancel</button>
+
+          <button
+            type="button"
+            onclick={() => addingRule = false}
+            class="btn-cancel"
+          >Cancel</button>
         </div>
       </form>
     </div>
@@ -559,7 +578,7 @@
       No recurring rules yet.
       <button
         type="button"
-        onclick={() => (addingRule = true)}
+        onclick={() => addingRule = true}
         class="ml-1 inline-flex items-center rounded-md border border-slate-300 px-2 py-0.5 text-sm text-slate-100 transition-colors hover:border-blue-300/50 hover:text-blue-500"
       >+ New rule</button>
     </div>

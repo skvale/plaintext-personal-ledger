@@ -9,7 +9,7 @@ import {
   recategorize,
   recategorizeMany,
   appendRule
-} from '$lib/hledger.server.js';
+} from '#lib/hledger.server.js';
 import type { Actions, PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async () => {

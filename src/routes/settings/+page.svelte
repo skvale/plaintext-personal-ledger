@@ -3,7 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit-svelte/core';
   import { SortableContext, arrayMove } from '@dnd-kit-svelte/sortable';
-  import SettingsSortableItem from '$lib/components/SettingsSortableItem.svelte';
+  import SettingsSortableItem from '#lib/components/SettingsSortableItem.svelte';
 
   let { data, form } = $props();
 

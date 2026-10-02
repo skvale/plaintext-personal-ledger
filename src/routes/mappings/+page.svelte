@@ -8,25 +8,21 @@
     type DragStartEvent,
   } from "@dnd-kit-svelte/core";
   import { SortableContext, arrayMove } from "@dnd-kit-svelte/sortable";
-  import type { RulesItem } from "$lib/types.js";
-  import LearningBanner from "$lib/components/LearningBanner.svelte";
-  import RuleSortableItem from "$lib/components/RuleSortableItem.svelte";
-  import SectionDropTarget from "$lib/components/SectionDropTarget.svelte";
-  import Combobox from "$lib/components/Combobox.svelte";
+  import type { RulesItem } from "#lib/types.js";
+  import LearningBanner from "#lib/components/LearningBanner.svelte";
+  import RuleSortableItem from "#lib/components/RuleSortableItem.svelte";
+  import SectionDropTarget from "#lib/components/SectionDropTarget.svelte";
+  import Combobox from "#lib/components/Combobox.svelte";
   import { Popover } from "bits-ui";
-  import { page } from "$app/stores";
+  import { page } from '$app/state';
 
-  const learningEnabled = $derived(
-    $page.data.settings?.learning?.enabled ?? false,
-  );
+  const learningEnabled = $derived(page.data.settings?.learning?.enabled ?? false);
 
   function suggestAccount(description: string): string {
     const lower = description.toLowerCase();
     // User keywords first (higher priority), then built-in
-    const allKeywords = [
-      ...(_props.data.userKeywords ?? []),
-      ...BUILT_IN_KEYWORDS,
-    ];
+    const allKeywords = [..._props.data.userKeywords ?? [], ...BUILT_IN_KEYWORDS];
+
     for (const entry of allKeywords) {
       if (entry.keywords.some((kw: string) => lower.includes(kw)))
         return entry.account;
@@ -569,12 +565,8 @@
         out.push("");
       }
     }
-    return (
-      out
-        .join("\n")
-        .replace(/\n{3,}/g, "\n\n")
-        .trimEnd() + "\n"
-    );
+
+    return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
   }
 
   // Client-side parse to sync raw text edits back to visual state
@@ -596,11 +588,8 @@
   ]);
   function isHeaderDirective(line: string): boolean {
     const key = line.split(/\s+/)[0];
-    return (
-      HEADER_KEYS.has(key) ||
-      /^account\d+$/.test(key) ||
-      /^amount\d+$/.test(key)
-    );
+
+    return HEADER_KEYS.has(key) || (/^account\d+$/).test(key) || (/^amount\d+$/).test(key);
   }
   function parseRulesClient(content: string): {
     header: string;
@@ -632,14 +621,14 @@
         let account = "";
         const assignments: { key: string; value: string }[] = [];
         let j = i + 1;
-        while (j < lines.length && /^\s+\S/.test(lines[j])) {
+        while (j < lines.length && (/^\s+\S/).test(lines[j])) {
           const t = lines[j].trim();
           const sp = t.indexOf(" ");
           if (sp > 0) {
             const key = t.slice(0, sp);
             const val = t.slice(sp + 1).trim();
             assignments.push({ key, value: val });
-            if (/^account\d*$/.test(key) && !account) account = val;
+            if ((/^account\d*$/).test(key) && !account) account = val;
           } else if (t) {
             assignments.push({ key: t, value: "" });
           }
@@ -660,11 +649,9 @@
           path: line.slice(8).trim(),
         });
         i++;
-      } else if (/^; ===/.test(line)) {
-        const label = line
-          .replace(/^;\s*=+\s*/, "")
-          .replace(/\s*=+\s*$/, "")
-          .trim();
+      } else if ((/^; ===/).test(line)) {
+        const label = line.replace(/^;\s*=+\s*/, "").replace(/\s*=+\s*$/, "").trim();
+
         if (label) ruleItems.push({ type: "section", id: `sec-${i}`, label });
         i++;
       } else {
@@ -720,9 +707,9 @@
   }
 
   let pendingAccounts = $state<Set<string>>(new Set());
-  const allAccountsWithPending = $derived(
-    [...new Set([...(data.accounts as string[]), ...pendingAccounts])].sort(),
-  );
+  const allAccountsWithPending = $derived([
+    ...new Set([...data.accounts as string[], ...pendingAccounts])
+  ].sort());
 
   function trackAccount(name: string) {
     pendingAccounts = new Set([...pendingAccounts, name]);
@@ -781,13 +768,10 @@
 
   // Drag-and-drop state
   let activeDragId = $state<string | null>(null);
-  const activeDragItem = $derived(
-    activeDragId
-      ? (items.find((x) => x.type === "rule" && x.id === activeDragId) as
-          | (RulesItem & { type: "rule" })
-          | undefined)
-      : undefined,
-  );
+
+  const activeDragItem = $derived(activeDragId
+    ? items.find((x) => x.type === "rule" && x.id === activeDragId) as (RulesItem & { type: "rule" }) | undefined
+    : undefined);
 
   function onDragStart(event: DragStartEvent) {
     activeDragId = event.active.id as string;
@@ -816,7 +800,7 @@
         if (value === "SKIP") {
           return { ...updated, assignments: [{ key: "SKIP", value: "" }] };
         }
-        const assigns = [...(updated.assignments ?? [])];
+        const assigns = [...updated.assignments ?? []];
         const skipIdx = assigns.findIndex((a) => a.key === "SKIP");
         if (skipIdx >= 0) assigns.splice(skipIdx, 1);
         const idx = assigns.findIndex((a) => a.key === "account2");
@@ -837,7 +821,7 @@
   ) {
     items = items.map((x) => {
       if (x.type !== "rule" || x.id !== ruleId) return x;
-      const assigns = [...(x.assignments ?? [])];
+      const assigns = [...x.assignments ?? []];
       assigns[assignIdx] = { ...assigns[assignIdx], [field]: val };
       // Keep account in sync
       const acc2 = assigns.find((a) => a.key === "account2");
@@ -849,7 +833,7 @@
   function addAssignment(ruleId: string) {
     items = items.map((x) => {
       if (x.type !== "rule" || x.id !== ruleId) return x;
-      const assigns = [...(x.assignments ?? [])];
+      const assigns = [...x.assignments ?? []];
       // Find next account number
       const nums = assigns.map((a) => {
         const m = a.key.match(/^account(\d+)$/);
@@ -979,7 +963,7 @@
       {#if data.active}
         <button
           type="button"
-          onclick={() => (showRaw = !showRaw)}
+          onclick={() => showRaw = !showRaw}
           class="rounded-md px-2.5 py-1 text-sm font-medium transition-colors
             {showRaw
             ? 'bg-slate-700 text-slate-100'
@@ -1182,7 +1166,7 @@
       <textarea
         bind:value={rawTextLocal}
         oninput={(e) => applyRawEdit((e.target as HTMLTextAreaElement).value)}
-        onfocus={() => (rawFocused = true)}
+        onfocus={() => rawFocused = true}
         onblur={() => {
           rawFocused = false;
           rawTextLocal = serializeRules(currentHeader, items);
@@ -1337,10 +1321,11 @@
                           stroke="currentColor"
                           stroke-width="2"
                           stroke-linecap="round"
-                          ><circle cx="12" cy="12" r="10" /><path
-                            d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                          /><path d="M12 17h.01" /></svg
                         >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                          <path d="M12 17h.01"></path>
+                        </svg>
                       </Popover.Trigger>
                       <Popover.Portal>
                         <Popover.Content
@@ -1379,10 +1364,11 @@
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
-                        ><circle cx="12" cy="12" r="10" /><path
-                          d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                        /><path d="M12 17h.01" /></svg
                       >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <path d="M12 17h.01"></path>
+                      </svg>
                     </Popover.Trigger>
                     <Popover.Portal>
                       <Popover.Content
@@ -1428,10 +1414,11 @@
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
-                        ><circle cx="12" cy="12" r="10" /><path
-                          d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                        /><path d="M12 17h.01" /></svg
                       >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <path d="M12 17h.01"></path>
+                      </svg>
                     </Popover.Trigger>
                     <Popover.Portal>
                       <Popover.Content
@@ -1502,9 +1489,9 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg
-                ></button
-              >
+                  stroke-linecap="round"
+                ><path d="M18 6 6 18M6 6l12 12"></path></svg>
+              </button>
             </div>
           {/each}
 
@@ -1549,9 +1536,9 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg
-                ></button
-              >
+                  stroke-linecap="round"
+                ><path d="M18 6 6 18M6 6l12 12"></path></svg>
+              </button>
             </div>
           {/each}
 
@@ -1592,7 +1579,7 @@
         value={JSON.stringify({ header: currentHeader, items })}
       />
 
-      <DndContext {onDragStart} {onDragEnd}>
+      <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <SortableContext items={sortableIds.map((id) => ({ id }))}>
           <div class="space-y-0">
             {#each items as item (item.id)}

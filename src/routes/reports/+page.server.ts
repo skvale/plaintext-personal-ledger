@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getAccountNames, JOURNAL } from '$lib/hledger.server.js';
-import { execAsync } from '$lib/hledger/exec.js';
+import { getAccountNames, JOURNAL } from '#lib/hledger.server.js';
+import { execAsync } from '#lib/hledger/exec.js';
 
 type CustomReport = {
   name: string;

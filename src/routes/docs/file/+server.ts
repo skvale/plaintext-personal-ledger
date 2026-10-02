@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { STATEMENTS_DIR } from '$lib/hledger.server.js';
+import { STATEMENTS_DIR } from '#lib/hledger.server.js';
 import { join, resolve, normalize } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { error } from '@sveltejs/kit';

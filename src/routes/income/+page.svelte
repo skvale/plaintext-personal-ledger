@@ -1,20 +1,20 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import Chart from '$lib/Chart.svelte';
+  import Chart from '#lib/Chart.svelte';
   import { goto } from '$app/navigation';
-  import { theme } from '$lib/theme.svelte.js';
-  import LearningBanner from '$lib/components/LearningBanner.svelte';
-  import MonthlyReportTable from '$lib/components/MonthlyReportTable.svelte';
-  import MonthSelector from '$lib/components/MonthSelector.svelte';
-  import { page } from '$app/stores';
-  import { parseCommodity, formatAmount } from '$lib/format.js';
+  import { theme } from '#lib/theme.svelte.js';
+  import LearningBanner from '#lib/components/LearningBanner.svelte';
+  import MonthlyReportTable from '#lib/components/MonthlyReportTable.svelte';
+  import MonthSelector from '#lib/components/MonthSelector.svelte';
+  import { page } from '$app/state';
+  import { parseCommodity, formatAmount } from '#lib/format.js';
 
   let { data }: { data: PageData } = $props();
 
-  const commodityFmt = $derived(parseCommodity($page.data.commodity ?? '$1,000.00'));
-  const roundAmounts = $derived($page.data.settings?.display?.roundAmounts === true);
+  const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
+  const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);
-  const showSymbol = $derived($page.data.settings?.display?.showCurrencySymbol !== false);
+  const showSymbol = $derived(page.data.settings?.display?.showCurrencySymbol !== false);
   function fmt(n: number) {
     const full = formatAmount(Math.abs(n), displayFmt);
     if (showSymbol) return full;
@@ -28,12 +28,27 @@
     goto(`/income?months=${n}`, { replaceState: true, noScroll: true });
   }
 
-  const tableSections = $derived(mm ? [
-    { account: 'income', rows: mm.accounts.filter(a => a.type === 'income'), totals: mm.incomeTotals, amountColor: 'text-emerald-400' },
-    { account: 'expenses', rows: mm.accounts.filter(a => a.type === 'expense'), totals: mm.expenseTotals, amountColor: 'text-rose-400' },
-  ] : []);
+  const tableSections = $derived(mm
+    ? [
+      {
+        account: 'income',
+        rows: mm.accounts.filter((a) => a.type === 'income'),
+        totals: mm.incomeTotals,
+        amountColor: 'text-emerald-400'
+      },
 
-  const tableFooter = $derived(mm ? { label: 'Net Income', amounts: mm.netTotals } : undefined);
+      {
+        account: 'expenses',
+        rows: mm.accounts.filter((a) => a.type === 'expense'),
+        totals: mm.expenseTotals,
+        amountColor: 'text-rose-400'
+      }
+    ]
+    : []);
+
+  const tableFooter = $derived(mm
+    ? { label: 'Net Income', amounts: mm.netTotals }
+    : undefined);
 
   const barChartConfig = $derived({
     type: 'bar' as const,
@@ -84,8 +99,8 @@
 </script>
 
 <LearningBanner id="pnl" title="Income vs expenses">
-  <strong>Profit &amp; Loss</strong> is your monthly scorecard: how much came in (income) vs. how much went out (expenses).
-  If income is higher, you saved money. If expenses are higher, you spent more than you earned that month.
+  <strong>Profit & Loss</strong>
+  is your monthly scorecard: how much came in (income) vs. how much went out (expenses). If income is higher, you saved money. If expenses are higher, you spent more than you earned that month.
 </LearningBanner>
 
 <div class="mb-6 flex items-center justify-between">
