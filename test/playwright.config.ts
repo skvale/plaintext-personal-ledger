@@ -38,5 +38,16 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120000,
     },
+    {
+      // pnl-scroll is read-only, but it needs a journal with income and expenses
+      // spread across the year so the YTD table is genuinely wider than the
+      // viewport — which the shared DATA_DIR can't provide (the welcome suite
+      // deletes and rewrites its journal files).
+      command: `mkdir -p ${ROOT}/test/data/pnl-scroll && cd ${ROOT} && node build/index.js`,
+      url: "http://localhost:3111",
+      env: { PORT: "3111", DATA_DIR: `${ROOT}/test/data/pnl-scroll` },
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
   ],
 });

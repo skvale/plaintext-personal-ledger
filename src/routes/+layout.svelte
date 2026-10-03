@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { page } from '$app/state';
+  import { page, navigating } from '$app/state';
   import { onMount } from "svelte";
   import {
     refreshAll,
@@ -347,11 +347,37 @@
     theme.isDark = document.documentElement.classList.contains("dark");
 
     const es = new EventSource("/events");
+
+    // chokidar emits one event per changed file, so a single save can burst
+    // several of these. Coalesce into one trailing refresh.
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let refreshPending = false;
+    let deferAttempts = 0;
+
+    const flushRefresh = () => {
+      // An invalidation mid-navigation clobbers Kit's navigation token, which
+      // makes finish_navigation bail with "navigation aborted" — the click looks
+      // like it did nothing and the user has to click again. So never invalidate
+      // while navigating; hold the refresh until the navigation settles instead.
+      if (navigating.to) {
+        if (++deferAttempts < 20) {
+          refreshTimer = setTimeout(flushRefresh, 100);
+        }
+        return;
+      }
+      deferAttempts = 0;
+      if (!refreshPending) return;
+      refreshPending = false;
+      refreshAll();
+    };
+
     es.addEventListener("journal-changed", () => {
       // A save writes the journal, so this fires mid-submit. Invalidating then
       // would race the action's redirect and strand the user on the form.
       if (isSaveLocked()) return;
-      refreshAll();
+      refreshPending = true;
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(flushRefresh, 150);
     });
 
     let gDown = false;
@@ -422,6 +448,7 @@
     document.addEventListener("keydown", onKey);
     return () => {
       es.close();
+      clearTimeout(refreshTimer);
       document.removeEventListener("keydown", onKey);
       clearTimeout(gTimer);
     };

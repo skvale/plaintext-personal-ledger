@@ -87,10 +87,29 @@
   let showTotals = $state(true);
   const visibleTotals = $derived(canShowTotals && showTotals);
   const sum = (amounts: number[]) => amounts.reduce((a, b) => a + b, 0);
+
+  let scrollEl = $state<HTMLDivElement | undefined>(undefined);
+
+  // Which columns are shown, as a primitive. Keyed on this rather than the months
+  // array itself so a data refresh (which hands us a fresh array) doesn't yank the
+  // scroll out from under someone reading an older month.
+  const monthKey = $derived(months.join(','));
+
+  $effect(() => {
+    // Re-run when the period changes, e.g. switching to YTD and making the table
+    // wide enough to scroll.
+    const _ = monthKey;
+    const el = scrollEl;
+    if (!el) return;
+    // The Account column is sticky, so row labels stay readable when parked at
+    // the right-hand end — which is where the recent months and the total live.
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.scrollLeft = el.scrollWidth; }));
+    setTimeout(() => { el.scrollLeft = el.scrollWidth; }, 150);
+  });
 </script>
 
 <div class="rounded-xl border border-slate-400 bg-slate-900 overflow-hidden">
-  <div class="overflow-x-auto">
+  <div bind:this={scrollEl} class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-black/[0.08] dark:border-white/[0.06] text-left">

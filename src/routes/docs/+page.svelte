@@ -2,7 +2,7 @@
   import { enhance } from '$app/forms';
   import { page } from '$app/state';
   import { refreshAll, goto } from '$app/navigation';
-  import { tick, onMount } from 'svelte';
+  import { tick, onMount, untrack } from 'svelte';
   import AccountLabel from '#lib/components/AccountLabel.svelte';
   import FileIcon from '#lib/components/FileIcon.svelte';
   import FilePreview from '#lib/components/FilePreview.svelte';
@@ -170,9 +170,16 @@
 
   const isPreviewing = $derived(!!previewToken && !importSuccess);
 
+  // Mutable copy of the router's current URL. Must be page.url, not
+  // window.location.href: goto() commits history.pushState asynchronously, so
+  // location.href still points at the previous URL when the click handler
+  // returns, and anything reading it races the router.
+  function currentUrl(): URL {
+    return new URL(page.url.href);
+  }
+
   // Sync import panel state with URL params
-  function syncFromUrl() {
-    const url = new URL(window.location.href);
+  function syncFromUrl(url: URL) {
     const rel = url.searchParams.get('import');
     const hasPreview = url.searchParams.has('preview');
 
@@ -213,11 +220,15 @@
     }
   }
 
-  // Re-sync import state whenever the URL changes (back/forward, SvelteKit navigation)
+  // Re-sync import state when the router commits a URL change (back/forward,
+  // navigation). Depends on page.url and nothing else, deliberately: syncFromUrl
+  // writes mode/previewToken/previewOutput, so tracking those would re-run this
+  // effect on the very click that sets them — before goto() has committed the new
+  // URL — and the "no ?import= in URL" branch would immediately undo the click.
+  // That's why Import needed two clicks.
   $effect(() => {
-    // Subscribe to $page.url so this runs on every navigation
-    page.url;
-    syncFromUrl();
+    const href = page.url.href;
+    untrack(() => syncFromUrl(new URL(href)));
   });
 
   // Close upload/invoice panels on success (these use plain use:enhance which updates form)
@@ -255,16 +266,16 @@
     skippedCount = 0;
     mode = 'import';
     // Push ?import= so the back button returns to the file list
-    const url = new URL(window.location.href);
+    const url = currentUrl();
     url.searchParams.set('import', file.relPath);
     url.searchParams.delete('preview');
-    goto(url, { shallow: true });
+    goto(url, { state: {}, shallow: true });
   }
 
   function cancelImport() {
     importingFile = null;
     mode = 'none';
-    const url = new URL(window.location.href);
+    const url = currentUrl();
     url.searchParams.delete('import');
     url.searchParams.delete('preview');
     goto(url, { shallow: true });
@@ -377,7 +388,7 @@
             for (const [desc, s] of Object.entries(suggestions)) {
               suggestedAccounts[desc] = s.account;
             }
-            const url = new URL(window.location.href);
+            const url = currentUrl();
             url.searchParams.set('preview', '1');
             goto(url, { state: {}, shallow: true });
           } else if (result.type === 'failure') {
@@ -694,7 +705,7 @@
                   for (const [desc, s] of Object.entries(suggestions)) {
                     suggestedAccounts[desc] = s.account;
                   }
-                  const url = new URL(window.location.href);
+                  const url = currentUrl();
                   url.searchParams.set('preview', '1');
                   goto(url, { state: {}, shallow: true });
                 }}
