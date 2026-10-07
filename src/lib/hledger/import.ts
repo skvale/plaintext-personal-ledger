@@ -1,7 +1,6 @@
-import { readFile, writeFile, readdir, appendFile } from "node:fs/promises";
+import { readFile, writeFile, readdir, appendFile, unlink } from "node:fs/promises";
 import { join, dirname, basename } from "node:path";
-import { runJson } from "./cache.js";
-import { pickAmount, pickCommodity, extractTag } from "./parsing.js";
+import { pickCommodity, extractTag } from "./parsing.js";
 import { getWriteJournal, JOURNAL_DIR, STATEMENTS_DIR } from "./journal.js";
 import { invalidateCache } from "./cache.js";
 import { execAsync } from "./exec.js";
@@ -808,106 +807,6 @@ export async function rulesFileExists(filename: string): Promise<boolean> {
   }
 }
 
-// ─── Dedup: Parse & Filter ────────────────────────────────────────────────────
-
-interface ParsedBlock {
-  date: string;
-  payee: string;
-  description: string;
-  amount: number;
-}
-
-/**
- * Parse a single hledger dry-run text block into structured fields for dedup.
- * Block format: "2026-03-15 * Payee | Description\n    account    $5.50\n    ..."
- */
-function parseImportBlock(block: string): ParsedBlock | null {
-  const lines = block.split("\n");
-  const header = lines[0];
-  const dateMatch = header.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (!dateMatch) return null;
-
-  const date = dateMatch[1];
-
-  // Strip date + status marker (* or !) to get payee|description part
-  const afterStatus = header.replace(/^\d{4}-\d{2}-\d{2}\s*[*!]\s*/, "");
-  const pipeIdx = afterStatus.indexOf(" | ");
-  const payee = pipeIdx >= 0 ? afterStatus.slice(0, pipeIdx).trim() : "";
-  const description = pipeIdx >= 0 ? afterStatus.slice(pipeIdx + 3).trim() : afterStatus.trim();
-
-  // Amount: last posting line with a numeric value
-  let amount = 0;
-  for (let i = lines.length - 1; i > 0; i--) {
-    const m = lines[i].match(
-      /^\s+\S+\s+(-?[\d,]+\.?\d*)/,
-    );
-    if (m) {
-      amount = Math.abs(parseFloat(m[1].replace(/,/g, "")));
-      break;
-    }
-  }
-
-  return { date, payee, description, amount };
-}
-
-/**
- * Filter out candidate blocks that duplicate existing journal transactions
- * on the .latest date. This covers the gap where hledger's <= comparison
- * misses same-date re-imports.
- * Matching: same date + payee + amount (within $0.01).
- */
-async function filterDuplicateBlocks(
-  blocks: string[],
-  latestDate: string,
-): Promise<{ kept: string[]; skipped: number }> {
-  if (!latestDate) return { kept: blocks, skipped: 0 };
-
-  // Only query journal transactions on the .latest date
-  const journalTxns = (await runJson<any[]>([
-    "print",
-    "-B",
-    "-b",
-    latestDate,
-    "-e",
-    latestDate,
-  ])) ?? [];
-
-  // Build lookup from journal: key = "payee|amount"
-  const existing = new Set<string>();
-  for (const tx of journalTxns) {
-    const txPayee = (tx.tpayee ?? "").trim();
-    const postings = tx.tpostings ?? [];
-    let total = 0;
-    for (const p of postings) {
-      const acct = p.paccount ?? "";
-      if (acct.startsWith("equity")) continue;
-      total += pickAmount(p.pamount);
-    }
-    total = Math.abs(total);
-    existing.add(`${txPayee.toLowerCase()}\t${total.toFixed(2)}`);
-  }
-
-  const kept: string[] = [];
-  let skipped = 0;
-
-  for (const block of blocks) {
-    const parsed = parseImportBlock(block);
-    // Skip blocks not on the .latest date — hledger handles those via .latest
-    if (!parsed || parsed.date !== latestDate) {
-      kept.push(block);
-      continue;
-    }
-    const key = `${parsed.payee.toLowerCase()}\t${parsed.amount.toFixed(2)}`;
-    if (existing.has(key)) {
-      skipped++;
-    } else {
-      kept.push(block);
-    }
-  }
-
-  return { kept, skipped };
-}
-
 // ─── Preview Normalization ─────────────────────────────────────────────────────
 
 function normalizePreview(raw: string): string {
@@ -946,25 +845,113 @@ function normalizePreview(raw: string): string {
 
 // ─── .latest helpers ───────────────────────────────────────────────────────────
 
-/** Copy the rules-keyed .latest date into the CSV's directory so hledger's
- *  built-in dedup finds it. hledger looks for .latest.<CSV-FILENAME> in the
- *  CSV dir, NOT .latest.<RULES-FILENAME>. */
-async function applyLatestFromRules(
-  rulesFilename: string,
-  csvPath: string,
-): Promise<void> {
-  const latestPath = join(JOURNAL_DIR, `.latest.${rulesFilename}`);
+/** Path of the hledger watermark for a file: .latest.<name>, beside it. */
+function latestPathFor(file: string): string {
+  return join(dirname(file), `.latest.${basename(file)}`);
+}
+
+/**
+ * Read a .latest file: the latest record date, repeated once per record
+ * imported on that date. hledger skips records before that date plus the
+ * first `count` records on it.
+ */
+async function readLatestFile(
+  latestPath: string,
+): Promise<{ date: string; count: number }> {
+  let content: string;
   try {
-    const latestDate = await readFile(latestPath, "utf-8").then(s => s.trim());
-    if (latestDate) {
-      const csvDir = dirname(csvPath);
-      const csvBasename = basename(csvPath);
-      // hledger reads .latest.<CSV-BASENAME> from the CSV directory
-      const csvLatestPath = join(csvDir, `.latest.${csvBasename}`);
-      await writeFile(csvLatestPath, latestDate + "\n", "utf-8");
-    }
+    content = await readFile(latestPath, "utf-8");
   } catch {
-    // No .latest file yet — first import, nothing to skip
+    return { date: "", count: 0 };
+  }
+  const lines = content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return { date: lines[0] ?? "", count: lines.length };
+}
+
+/** Write a .latest file, repeating the date `count` times (hledger's format). */
+async function writeLatestFile(
+  latestPath: string,
+  date: string,
+  count: number,
+): Promise<void> {
+  await writeFile(
+    latestPath,
+    Array(Math.max(count, 1)).fill(date).join("\n") + "\n",
+    "utf-8",
+  );
+}
+
+/** Point a file's watermark at another one, so a temp copy of a CSV dedups
+ *  exactly like the original. Removes the target when there is nothing to
+ *  copy — an absent watermark means "import everything". */
+async function copyLatest(source: string, target: string): Promise<void> {
+  const { date, count } = await readLatestFile(source);
+  if (date) await writeLatestFile(target, date, count);
+  else await unlink(target).catch(() => {});
+}
+
+/**
+ * hledger only honours .latest.<FILENAME> in the directory of the file it is
+ * importing, so a copy that lives elsewhere (normalised CSV, pasted content)
+ * has to be seeded. The real CSV uses its own watermark — seeding it from the
+ * rules file would drop rows this CSV never imported.
+ */
+async function seedWatermark(
+  csvPath: string,
+  rulesPath: string,
+  hledgerCsvPath: string,
+  isTemp: boolean,
+): Promise<void> {
+  if (latestPathFor(hledgerCsvPath) === latestPathFor(csvPath)) return;
+  if (isTemp) {
+    // Pasted content has no CSV of its own to key a watermark to.
+    await copyLatest(
+      join(JOURNAL_DIR, `.latest.${basename(rulesPath)}`),
+      latestPathFor(hledgerCsvPath),
+    );
+  } else {
+    await copyLatest(latestPathFor(csvPath), latestPathFor(hledgerCsvPath));
+  }
+}
+
+/**
+ * Advance a watermark the way hledger's own import command does: repeat the
+ * new date once per record just imported on it, and keep the previous record
+ * count when the date does not move. Never moves the date backwards.
+ */
+async function advanceLatest(
+  latestPath: string,
+  date: string,
+  recordsOnDate: number,
+): Promise<void> {
+  const prev = await readLatestFile(latestPath);
+  if (prev.date && date < prev.date) return;
+  const count =
+    prev.date === date ? prev.count + recordsOnDate : recordsOnDate;
+  await writeLatestFile(latestPath, date, count);
+}
+
+/** Total records hledger reads from a CSV. Only `import` applies the
+ *  watermark, so `print` sees everything — the difference against the blocks
+ *  about to be imported is what the watermark skipped. */
+async function countCsvRecords(
+  csvPath: string,
+  rulesPath: string,
+): Promise<number> {
+  const countBlocks = (raw: string) =>
+    (raw.match(/^\d{4}-\d{2}-\d{2}/gm) ?? []).length;
+  try {
+    const { stdout, stderr } = await execAsync(
+      `hledger -f "${csvPath}" --rules-file "${rulesPath}" print`,
+    );
+    return countBlocks([stdout, stderr].filter(Boolean).join("\n"));
+  } catch (e: any) {
+    return countBlocks(
+      [e.stdout ?? "", e.stderr ?? ""].filter(Boolean).join("\n"),
+    );
   }
 }
 
@@ -1007,8 +994,9 @@ export async function importCsvPreview(
 
   prunePendingImports(unlink);
 
-  // Let hledger find the rules-keyed .latest so dedup works per rules file
-  await applyLatestFromRules(rulesFilename, tmpPath);
+  // Seed the temp file with the rules-keyed watermark: pasted content has no
+  // stable CSV name for hledger to key .latest to.
+  await seedWatermark(tmpPath, rulesPath, tmpPath, true);
 
   try {
     const { stdout, stderr } = await execAsync(
@@ -1038,29 +1026,18 @@ export async function importCsvConfirm(
     return { success: false, error: "Session expired — please re-preview." };
 
   pendingImports.delete(token);
-  const { unlink, writeFile, appendFile } = await import("node:fs/promises");
   const writeJournalPath = await getWriteJournal();
 
-  // Let hledger find the rules-keyed .latest so dedup works per rules file
+  // hledger reads .latest.<FILENAME> beside the file it imports: the real CSV
+  // keeps its own watermark, a temp copy gets it copied over.
   const rulesFilename = basename(pending.rulesPath);
   const hledgerCsvPath = pending.normalizedPath ?? pending.csvPath;
-  await applyLatestFromRules(rulesFilename, pending.csvPath);
-  if (hledgerCsvPath !== pending.csvPath) {
-    await applyLatestFromRules(rulesFilename, hledgerCsvPath);
-  }
-
-  // Read the .latest date for application-level dedup
-  let latestDate = "";
-  try {
-    latestDate = await readFile(
-      join(JOURNAL_DIR, `.latest.${rulesFilename}`),
-      "utf-8",
-    ).then((s) => s.trim());
-  } catch {
-    // No .latest file yet — first import, no dedup needed
-  }
-
-  let skipped = 0;
+  await seedWatermark(
+    pending.csvPath,
+    pending.rulesPath,
+    hledgerCsvPath,
+    pending.isTemp,
+  );
 
   try {
     const { stdout, stderr } = await execAsync(
@@ -1069,20 +1046,15 @@ export async function importCsvConfirm(
     const raw = [stdout, stderr].filter(Boolean).join("\n").trim();
     const output = normalizePreview(raw);
 
-    let blocks = output
+    const blocks = output
       .split(/\n\n+/)
       .map((b) => b.trim())
       .filter((b) => /^\d{4}-\d{2}-\d{2}/.test(b));
 
-    if (blocks.length === 0) {
-      invalidateCache();
-      return { success: true };
-    }
-
-    // Application-level dedup: skip blocks matching journal txns on the .latest date
-    const dedup = await filterDuplicateBlocks(blocks, latestDate);
-    blocks = dedup.kept;
-    skipped = dedup.skipped;
+    // hledger doesn't report what it held back; the records it can read from
+    // the CSV minus the ones about to be imported is the skipped count.
+    const total = await countCsvRecords(hledgerCsvPath, pending.rulesPath);
+    const skipped = Math.max(0, total - blocks.length);
 
     if (blocks.length === 0) {
       invalidateCache();
@@ -1110,29 +1082,23 @@ export async function importCsvConfirm(
       .filter(Boolean);
     const maxDate = [...dates].sort().pop() ?? "";
     if (maxDate) {
-      // Key .latest to the rules file so dedup survives changing CSV filenames
-      const latestPath = join(JOURNAL_DIR, `.latest.${rulesFilename}`);
-      await writeFile(latestPath, maxDate + "\n", "utf-8");
-      // Write .latest into CSV dir so hledger finds it on next import
-      const csvDir = pending.csvPath.split("/").slice(0, -1).join("/");
-      if (csvDir) {
-        await writeFile(
-          `${csvDir}/.latest.${rulesFilename}`,
-          maxDate + "\n",
-          "utf-8",
-        ).catch(() => {});
-        // Per-CSV .latest for display on the documents page
-        if (!pending.isTemp) {
-          const csvBaseName = pending.csvPath.split("/").pop() ?? "";
-          if (csvBaseName) {
-            await writeFile(
-              `${csvDir}/.latest.${csvBaseName}`,
-              maxDate + "\n",
-              "utf-8",
-            ).catch(() => {});
-          }
-        }
+      // One line per record imported on the max date, or the next import only
+      // holds back a single one of them and re-imports the rest.
+      const onMaxDate = blocks.filter((b) => b.startsWith(maxDate)).length;
+      if (!pending.isTemp) {
+        await advanceLatest(
+          latestPathFor(pending.csvPath),
+          maxDate,
+          onMaxDate,
+        );
       }
+      // Pasted content has no stable CSV name, so it also feeds a watermark
+      // keyed to the rules file.
+      await advanceLatest(
+        join(JOURNAL_DIR, `.latest.${rulesFilename}`),
+        maxDate,
+        onMaxDate,
+      );
     }
 
     invalidateCache();
@@ -1183,9 +1149,8 @@ export async function importCsvPreviewPath(
   });
 
   try {
-  // Ensure CSV-keyed .latest is in place for hledger's built-in dedup
-    await applyLatestFromRules(rulesFilename, csvAbs);
-    if (normalizedPath) await applyLatestFromRules(rulesFilename, normalizedPath);
+    // Seed the watermark hledger will look for beside whichever file it reads.
+    await seedWatermark(csvAbs, rulesPath, hledgerCsvPath, false);
 
     const { stdout, stderr } = await execAsync(
       `hledger -f "${writeJournalPath}" -I import --dry-run --rules-file "${rulesPath}" "${hledgerCsvPath}"`,
