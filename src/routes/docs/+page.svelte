@@ -15,6 +15,7 @@
   import type { PageData, ActionData } from './$types';
   import type { DocFile } from '#lib/hledger.server.js';
   import { parseCommodity, formatAmount } from '#lib/format.js';
+  import { actionData } from '#lib/actionData.js';
   import { billSchema } from '#lib/schemas/bill.js';
 
   let { data, form: formResult }: { data: PageData; form: ActionData } = $props();
@@ -180,8 +181,14 @@
 
   // Sync import panel state with URL params
   function syncFromUrl(url: URL) {
-    const rel = url.searchParams.get('import');
-    const hasPreview = url.searchParams.has('preview');
+    // refreshAll() — both the post-import refresh and the SSE journal-changed one —
+    // re-materializes page.url from the load URL and drops query params pushed with
+    // goto(..., { shallow: true }), while window.location keeps them. Prefer the
+    // router's view but fall back to the real location, so an invalidation is never
+    // mistaken for "the user navigated away from the import panel".
+    const loc = new URL(window.location.href);
+    const rel = url.searchParams.get('import') ?? loc.searchParams.get('import');
+    const hasPreview = url.searchParams.has('preview') || loc.searchParams.has('preview');
 
     if (rel && mode !== 'import') {
       for (const group of data.monthGroups) {
@@ -479,8 +486,7 @@
               fd.set('csvRel', importingFile.relPath);
               fd.set('rulesFile', selectedRulesFile);
               const res = await fetch('?/preview', { method: 'POST', body: fd });
-              const json = await res.json();
-              const pData = json?.data ? JSON.parse(json.data) : null;
+              const pData = await actionData(res);
               if (!pData || pData.previewError) {
                 isLoading = false;
                 previewError = pData?.previewError ?? 'Preview failed.';
@@ -492,8 +498,7 @@
               cfd.set('token', token);
               const cRes = await fetch('?/confirm', { method: 'POST', body: cfd });
               isLoading = false;
-              const cJson = await cRes.json();
-              const cData = cJson?.data ? JSON.parse(cJson.data) : null;
+              const cData = await actionData(cRes);
               if (cData?.importError) {
                 importError = cData.importError;
               } else {
@@ -517,19 +522,11 @@
               const fd = new FormData();
               fd.set('csvRel', importingFile.relPath);
               const res = await fetch('?/createRuleFromCsv', { method: 'POST', body: fd });
-              const json = await res.json();
               isLoading = false;
               let createdFile = '';
-              if (json?.data) {
-                try {
-                  const data = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
-                  // Response is like [{"createdFromCsv":1}, "filename.rules"]
-                  if (Array.isArray(data)) {
-                    createdFile = data[1] ?? '';
-                  } else {
-                    createdFile = data.createdFromCsv ?? '';
-                  }
-                } catch {}
+              const ruleData = await actionData(res);
+              if (ruleData) {
+                createdFile = (Array.isArray(ruleData) ? ruleData[1] : ruleData.createdFromCsv) ?? '';
               }
               if (createdFile) {
                 window.location.href = `/mappings?file=${encodeURIComponent(createdFile)}`;
@@ -656,11 +653,7 @@
                   fd.set('rulesFile', selectedRulesFile);
                   fd.set('mappings', JSON.stringify(mappings));
                   const saveRes = await fetch('?/addMappings', { method: 'POST', body: fd });
-                  const saveJson = await saveRes.json();
-
-                  const saveData = saveJson?.data
-                    ? typeof saveJson.data === 'string' ? JSON.parse(saveJson.data) : saveJson.data
-                    : null;
+                  const saveData = await actionData(saveRes);
 
                   if (saveData?.mappingError) {
                     previewError = saveData.mappingError;
@@ -674,11 +667,7 @@
                   pfd.set('csvRel', importingFile.relPath);
                   pfd.set('rulesFile', selectedRulesFile);
                   const res = await fetch('?/preview', { method: 'POST', body: pfd });
-                  const json = await res.json();
-
-                  const pData = json?.data
-                    ? typeof json.data === 'string' ? JSON.parse(json.data) : json.data
-                    : null;
+                  const pData = await actionData(res);
 
                   isLoading = false;
                   if (!pData || pData.previewError) {
@@ -742,11 +731,7 @@
               const cfd = new FormData();
               cfd.set('token', previewToken);
               const cRes = await fetch('?/confirm', { method: 'POST', body: cfd });
-              const cJson = await cRes.json();
-
-              const cData = cJson?.data
-                ? typeof cJson.data === 'string' ? JSON.parse(cJson.data) : cJson.data
-                : null;
+              const cData = await actionData(cRes);
 
               isLoading = false;
               if (cData?.importError) {

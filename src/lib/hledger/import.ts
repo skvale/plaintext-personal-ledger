@@ -895,9 +895,12 @@ async function copyLatest(source: string, target: string): Promise<void> {
 
 /**
  * hledger only honours .latest.<FILENAME> in the directory of the file it is
- * importing, so a copy that lives elsewhere (normalised CSV, pasted content)
- * has to be seeded. The real CSV uses its own watermark — seeding it from the
- * rules file would drop rows this CSV never imported.
+ * importing, so the shared watermark has to be seeded onto whichever copy it
+ * will read. The rules-keyed watermark (.latest.<rulesfile> in JOURNAL_DIR)
+ * is the source of truth — one per .rules file, shared by every CSV imported
+ * with it — so renamed or re-downloaded statements still dedupe. A CSV's own
+ * watermark wins when it is further along, so files imported before
+ * rules-keyed watermarks existed never re-import.
  */
 async function seedWatermark(
   csvPath: string,
@@ -905,15 +908,26 @@ async function seedWatermark(
   hledgerCsvPath: string,
   isTemp: boolean,
 ): Promise<void> {
-  if (latestPathFor(hledgerCsvPath) === latestPathFor(csvPath)) return;
-  if (isTemp) {
-    // Pasted content has no CSV of its own to key a watermark to.
-    await copyLatest(
-      join(JOURNAL_DIR, `.latest.${basename(rulesPath)}`),
-      latestPathFor(hledgerCsvPath),
-    );
-  } else {
-    await copyLatest(latestPathFor(csvPath), latestPathFor(hledgerCsvPath));
+  const rulesLatest = await readLatestFile(
+    join(JOURNAL_DIR, `.latest.${basename(rulesPath)}`),
+  );
+  const ownLatest = isTemp
+    ? { date: "", count: 0 }
+    : await readLatestFile(latestPathFor(csvPath));
+  const src =
+    rulesLatest.date > ownLatest.date ||
+    (rulesLatest.date === ownLatest.date &&
+      rulesLatest.count >= ownLatest.count)
+      ? rulesLatest
+      : ownLatest;
+
+  const target = latestPathFor(hledgerCsvPath);
+  const cur = await readLatestFile(target);
+  if (src.date) {
+    if (cur.date !== src.date || cur.count !== src.count)
+      await writeLatestFile(target, src.date, src.count);
+  } else if (cur.date) {
+    await unlink(target).catch(() => {});
   }
 }
 

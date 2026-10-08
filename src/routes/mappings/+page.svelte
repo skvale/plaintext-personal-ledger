@@ -15,6 +15,7 @@
   import Combobox from "#lib/components/Combobox.svelte";
   import { Popover } from "bits-ui";
   import { page } from '$app/state';
+  import { actionData } from "#lib/actionData.js";
 
   const learningEnabled = $derived(page.data.settings?.learning?.enabled ?? false);
 
@@ -1126,24 +1127,12 @@
               method: "POST",
               body: fd,
             });
-            const json = await res.json();
-            // SvelteKit form action responses nest data as a stringified array:
-            // [{createdFromCsv: 1}, "actual-filename.rules"]
+            const parsed = await actionData(res);
             let createdFromCsv: string | undefined;
-            if (json?.data) {
-              try {
-                const parsed =
-                  typeof json.data === "string"
-                    ? JSON.parse(json.data)
-                    : json.data;
-                if (Array.isArray(parsed) && parsed[0]?.createdFromCsv) {
-                  createdFromCsv = parsed[1];
-                } else if (parsed?.createdFromCsv) {
-                  createdFromCsv = parsed.createdFromCsv;
-                }
-              } catch {
-                // Fallback
-              }
+            if (Array.isArray(parsed) && parsed[0]?.createdFromCsv) {
+              createdFromCsv = parsed[1];
+            } else if (parsed?.createdFromCsv) {
+              createdFromCsv = parsed.createdFromCsv;
             }
             if (createdFromCsv) {
               csvFileSelected = "";
@@ -1213,8 +1202,7 @@
                     body: fd,
                   });
                   detecting = false;
-                  const json = await res.json();
-                  const resData = json?.data ? JSON.parse(json.data) : null;
+                  const resData = await actionData(res);
                   if (resData?.detectError) {
                     detectError = resData.detectError;
                     return;

@@ -87,18 +87,21 @@ export async function getDocuments(): Promise<DocFolder[]> {
           const label = prefix ? `${prefix} › ${entry}` : entry;
           if (files.length > 0) folders.push({ name: label, files });
         } else {
-          await scanDir(fullPath, entry);
+          await scanDir(fullPath, prefix ? `${prefix}/${entry}` : entry);
         }
       } else if (s.isFile()) {
         const ext = entry.split(".").pop()?.toLowerCase() ?? "";
         const relPath = prefix ? `${prefix}/${entry}` : entry;
+        const latestImport =
+          ext === "csv" ? await readLatestImportDate(fullPath) : undefined;
+        const file: DocFile = { name: entry, relPath, ext, size: s.size, latestImport };
         const last = folders.find((f) => f.name === (prefix || ""));
         if (last) {
-          last.files.push({ name: entry, relPath, ext, size: s.size });
+          last.files.push(file);
         } else {
           folders.push({
             name: prefix || "",
-            files: [{ name: entry, relPath, ext, size: s.size }],
+            files: [file],
           });
         }
       }

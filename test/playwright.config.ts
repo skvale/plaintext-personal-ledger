@@ -18,6 +18,11 @@ export default defineConfig({
   testMatch: "*.spec.ts",
   globalSetup: "./global-setup.ts",
   timeout: 60000,
+  // Several specs share DATA_DIR=test/data and rewrite 2026.journal and the
+  // docs month dir in place (welcome creates journals, latest-watermark imports
+  // into them, docs-import drops CSVs there). Parallel workers race on those
+  // files, so the suite must run serially.
+  workers: 1,
   use: {
     baseURL: "http://localhost:3009",
   },
