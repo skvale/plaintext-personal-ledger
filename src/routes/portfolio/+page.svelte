@@ -316,6 +316,8 @@
             date={txn.date}
             description={txn.description}
             account={investPosting?.account}
+            colorAccount={investPosting?.account ?? 'assets:investments'}
+            postings={txn.postings.filter((p: any) => !p.account.startsWith('equity'))}
             amount={investTotal}
             href={txn.txid || txn.tindex
               ? `/tx/${txn.txid ?? txn.tindex}?ref=${encodeURIComponent('/portfolio')}`

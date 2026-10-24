@@ -828,8 +828,10 @@ function normalizePreview(raw: string): string {
         if (!m) return line;
         const [, , account, , rest] = m;
         const assertIdx = rest.indexOf(" = ");
-        const amount = assertIdx >= 0 ? rest.slice(0, assertIdx) : rest;
+        let amount = assertIdx >= 0 ? rest.slice(0, assertIdx) : rest;
         const assertion = assertIdx >= 0 ? rest.slice(assertIdx) : "";
+        // Fix double dollar signs and extra spaces
+        amount = amount.replace(/\$\$\s*/g, "$").replace(/\$\s+/g, "$ ");
         const isLastPosting = i === lines.length - 1;
         const padding = " ".repeat(Math.max(2, maxAcctLen - account.length + 2));
         if (isLastPosting && amount.trim() && !assertion) {
@@ -851,9 +853,9 @@ function latestPathFor(file: string): string {
 }
 
 /**
- * Read a .latest file: the latest record date, repeated once per record
- * imported on that date. hledger skips records before that date plus the
- * first `count` records on it.
+ * Read a .latest file: the latest record date on the first line. `count` is
+ * how many lines the file holds — older files repeated the date once per
+ * record on it; we now write a single line.
  */
 async function readLatestFile(
   latestPath: string,
@@ -871,25 +873,20 @@ async function readLatestFile(
   return { date: lines[0] ?? "", count: lines.length };
 }
 
-/** Write a .latest file, repeating the date `count` times (hledger's format). */
+/** Write a .latest file: the latest record date on a single line. */
 async function writeLatestFile(
   latestPath: string,
   date: string,
-  count: number,
 ): Promise<void> {
-  await writeFile(
-    latestPath,
-    Array(Math.max(count, 1)).fill(date).join("\n") + "\n",
-    "utf-8",
-  );
+  await writeFile(latestPath, date + "\n", "utf-8");
 }
 
 /** Point a file's watermark at another one, so a temp copy of a CSV dedups
  *  exactly like the original. Removes the target when there is nothing to
  *  copy — an absent watermark means "import everything". */
 async function copyLatest(source: string, target: string): Promise<void> {
-  const { date, count } = await readLatestFile(source);
-  if (date) await writeLatestFile(target, date, count);
+  const { date } = await readLatestFile(source);
+  if (date) await writeLatestFile(target, date);
   else await unlink(target).catch(() => {});
 }
 
@@ -924,28 +921,24 @@ async function seedWatermark(
   const target = latestPathFor(hledgerCsvPath);
   const cur = await readLatestFile(target);
   if (src.date) {
-    if (cur.date !== src.date || cur.count !== src.count)
-      await writeLatestFile(target, src.date, src.count);
+    if (cur.date !== src.date || cur.count !== 1)
+      await writeLatestFile(target, src.date);
   } else if (cur.date) {
     await unlink(target).catch(() => {});
   }
 }
 
 /**
- * Advance a watermark the way hledger's own import command does: repeat the
- * new date once per record just imported on it, and keep the previous record
- * count when the date does not move. Never moves the date backwards.
+ * Advance a watermark to the latest imported date, written as a single line.
+ * Never moves the date backwards.
  */
 async function advanceLatest(
   latestPath: string,
   date: string,
-  recordsOnDate: number,
 ): Promise<void> {
   const prev = await readLatestFile(latestPath);
   if (prev.date && date < prev.date) return;
-  const count =
-    prev.date === date ? prev.count + recordsOnDate : recordsOnDate;
-  await writeLatestFile(latestPath, date, count);
+  await writeLatestFile(latestPath, date);
 }
 
 /** Total records hledger reads from a CSV. Only `import` applies the
@@ -1096,22 +1089,14 @@ export async function importCsvConfirm(
       .filter(Boolean);
     const maxDate = [...dates].sort().pop() ?? "";
     if (maxDate) {
-      // One line per record imported on the max date, or the next import only
-      // holds back a single one of them and re-imports the rest.
-      const onMaxDate = blocks.filter((b) => b.startsWith(maxDate)).length;
       if (!pending.isTemp) {
-        await advanceLatest(
-          latestPathFor(pending.csvPath),
-          maxDate,
-          onMaxDate,
-        );
+        await advanceLatest(latestPathFor(pending.csvPath), maxDate);
       }
       // Pasted content has no stable CSV name, so it also feeds a watermark
       // keyed to the rules file.
       await advanceLatest(
         join(JOURNAL_DIR, `.latest.${rulesFilename}`),
         maxDate,
-        onMaxDate,
       );
     }
 

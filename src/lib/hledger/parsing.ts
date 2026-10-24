@@ -167,6 +167,8 @@ export function fmtAmount(amount: number): string {
 /** Prepend $ to bare numeric amounts like "39" or "-12.50" → "$39" / "-$12.50" */
 export function normaliseAmount(amt: string): string {
   if (!amt) return amt;
+  // Fix double dollar signs and extra spaces
+  amt = amt.replace(/\$\$\s*/g, "$").replace(/\$\s+/g, "$ ");
   // Handle balance assertions/assignments: "amount = assertion"
   const eqMatch = amt.match(/^(.*?)\s*=\s*(.+)$/);
   if (eqMatch) {

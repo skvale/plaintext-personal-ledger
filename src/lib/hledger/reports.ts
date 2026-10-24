@@ -266,7 +266,7 @@ export async function getBalanceSheetMultiMonth(
     }
   }
 
-  const flat = all
+  const named = all
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(({ name, depth, type, past, now }) => ({
       name,
@@ -274,6 +274,26 @@ export async function getBalanceSheetMultiMonth(
       type,
       amounts: [...past, now],
     }));
+
+  // Collapse single-child chains: an account whose only child carries the same
+  // balance (no postings of its own), like assets:bank:checking where bank holds
+  // only checking, is dropped so the child renders as "bank:checking" instead of
+  // nesting. The hledger --no-elide snapshot keeps these parents around, so we
+  // elide them here rather than in the query.
+  const sameAmounts = (a: number[], b: number[]) =>
+    a.length === b.length &&
+    a.every(
+      (v, i) =>
+        (Number.isNaN(v) && Number.isNaN(b[i])) || Math.abs(v - b[i]) < 1e-9,
+    );
+
+  const flat = named.filter((row) => {
+    const children = named.filter(
+      (o) => o.name.startsWith(row.name + ":") && o.depth === row.depth + 1,
+    );
+    if (children.length !== 1) return true;
+    return !sameAmounts(row.amounts, children[0].amounts);
+  });
 
   const pastAssetTotals = pastDates.map((_: any, i: number) =>
     pickAmount(assetSubPast?.prTotals?.prrAmounts?.[i]),
@@ -681,6 +701,59 @@ export async function getNetWorthHistory(): Promise<
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
+/**
+ * Investment revaluations are often recorded as balance assignments on
+ * `assets:investments` with the offset posted to `equity:unrealized`, e.g.
+ *
+ *     assets:investments:rod          = $32,400
+ *     equity:unrealized
+ *
+ * hledger's cost report (`-B`) counts that assignment delta as new cost, which
+ * hides the gain. Find those transactions so callers can back the revaluation
+ * out of cost basis. Returns the per-account delta and the delta per month.
+ */
+async function getUnrealizedAdjustments(): Promise<{
+  byAccount: Map<string, number>;
+  byMonth: Map<string, number>;
+}> {
+  const txns = (await runJson<any[]>(["print", "-B", "-e", "tomorrow"])) ?? [];
+  const byAccount = new Map<string, number>();
+  const byMonth = new Map<string, number>();
+
+  for (const tx of txns) {
+    const postings: any[] = tx.tpostings ?? [];
+    const unrealized = postings.find((p) =>
+      String(p.paccount ?? "").startsWith("equity:unrealized"),
+    );
+    if (!unrealized) continue;
+
+    // Only back out dollar revaluations. Share-count assignments (e.g. `= 20 AAPL`)
+    // don't inflate the dollar cost basis, so leave them alone.
+    const month = String(tx.tdate ?? "").slice(0, 7);
+    for (const p of postings) {
+      const acct = String(p.paccount ?? "");
+      if (!acct.startsWith("assets:investments")) continue;
+      if (!p.pbalanceassertion) continue;
+      const entries = Array.isArray(p.pamount) ? p.pamount : [p.pamount];
+      const amount = entries
+        .filter((a: any) => a?.acommodity === "$")
+        .reduce((s: number, a: any) => s + (a.aquantity?.floatingPoint ?? 0), 0);
+      if (!amount) continue;
+      byAccount.set(acct, (byAccount.get(acct) ?? 0) + amount);
+      byMonth.set(month, (byMonth.get(month) ?? 0) + amount);
+    }
+  }
+
+  return { byAccount, byMonth };
+}
+
+/** Sum revaluation adjustments dated on or before `month` (YYYY-MM). */
+function cumulativeAdjustment(byMonth: Map<string, number>, month: string): number {
+  let sum = 0;
+  for (const [m, v] of byMonth) if (m <= month) sum += v;
+  return sum;
+}
+
 export async function getPortfolioData(months: number = 12): Promise<{
   accounts: { name: string; balance: number }[];
   costAccounts: { name: string; balance: number }[];
@@ -688,11 +761,12 @@ export async function getPortfolioData(months: number = 12): Promise<{
   costHistory: { month: string; total: number }[];
 }> {
   const range = lastNMonths(months);
-  const [mktSnapshot, costSnapshot, mktHistJson, costHistJson] = await Promise.all([
+  const [mktSnapshot, costSnapshot, mktHistJson, costHistJson, unrealized] = await Promise.all([
     runJson<any>(["bal", "-V", "assets:investments", "--flat", "-e", "tomorrow"]),
     runJson<any>(["bal", "-B", "assets:investments", "--flat", "-e", "tomorrow"]),
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
+    getUnrealizedAdjustments(),
   ]);
 
   const mktRows: any[] = Array.isArray(mktSnapshot) ? (mktSnapshot[0] ?? []) : [];
@@ -704,7 +778,11 @@ export async function getPortfolioData(months: number = 12): Promise<{
   const costRows: any[] = Array.isArray(costSnapshot) ? (costSnapshot[0] ?? []) : [];
   const costAccounts = costRows
     .filter((row) => row[0] && row[0] !== "assets:investments")
-    .map((row) => ({ name: row[0] as string, balance: pickAmount(row[3]) }))
+    .map((row) => {
+      const name = row[0] as string;
+      const adjustment = unrealized.byAccount.get(name) ?? 0;
+      return { name, balance: pickAmount(row[3]) - adjustment };
+    })
     .filter((a) => Math.abs(a.balance) > 0.01);
 
   const mktTotal = accounts.reduce((s, a) => s + a.balance, 0);
@@ -721,10 +799,15 @@ export async function getPortfolioData(months: number = 12): Promise<{
   const costSubs: CbrSubreport[] = costHistJson?.cbrSubreports ?? [];
   const costAssetHist = findSubreport(costSubs, /asset/i)?.[1];
   const costDates: any[] = costHistJson?.cbrDates ?? [];
-  const costHistory = costDates.map((d, i) => ({
-    month: periodStart(d),
-    total: pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]),
-  }));
+  const costHistory = costDates.map((d, i) => {
+    const month = periodStart(d);
+    return {
+      month,
+      total:
+        pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]) -
+        cumulativeAdjustment(unrealized.byMonth, month),
+    };
+  });
 
   // The monthly report values the current (in-progress) month's bucket at month end,
   // so it can pick up prices/transactions dated later this month than today. Clamp the
@@ -861,12 +944,13 @@ export async function getUnrealizedGains(months: number = 12): Promise<Unrealize
   const now = new Date();
   const range = lastNMonths(months);
 
-  const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson, mktSnapJson, costSnapJson] = await Promise.all([
+  const [mktMonthlyJson, costMonthlyJson, realizedMonthlyJson, mktSnapJson, costSnapJson, unrealized] = await Promise.all([
     runJson<any>(["balancesheet", "-V", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["balancesheet", "-B", "--monthly", "--depth", "1", "-p", range, "assets:investments"]),
     runJson<any>(["bal", "income:capital-gains", "--monthly", "--flat", "-p", range]),
     runJson<any>(["bal", "-V", "assets:investments", "--flat", "-e", "tomorrow"]),
     runJson<any>(["bal", "-B", "assets:investments", "--flat", "-e", "tomorrow"]),
+    getUnrealizedAdjustments(),
   ]);
 
   const snapRows = (j: any) => (Array.isArray(j) ? (j[0] ?? []) : []);
@@ -875,7 +959,7 @@ export async function getUnrealizedGains(months: number = 12): Promise<Unrealize
       .filter((row: any) => row[0] && row[0] !== "assets:investments")
       .reduce((s: number, row: any) => s + pickAmount(row[3]), 0);
   const currentMkt = snapTotal(snapRows(mktSnapJson));
-  const currentCost = snapTotal(snapRows(costSnapJson));
+  const currentCostRaw = snapTotal(snapRows(costSnapJson));
 
   const mktSubs: CbrSubreport[] = mktMonthlyJson?.cbrSubreports ?? [];
   const mktAssetHist = findSubreport(mktSubs, /asset/i)?.[1];
@@ -902,7 +986,9 @@ export async function getUnrealizedGains(months: number = 12): Promise<Unrealize
     // so gains reconcile with Total Value - Cost Basis rather than month-end (future).
     const isCurrent = i === mktDates.length - 1;
     const mktTotal = isCurrent && currentMkt !== 0 ? currentMkt : pickAmount(mktAssetHist?.prTotals?.prrAmounts?.[i]);
-    const costTotal = isCurrent && currentCost !== 0 ? currentCost : pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]);
+    const rawCost = isCurrent && currentCostRaw !== 0 ? currentCostRaw : pickAmount(costAssetHist?.prTotals?.prrAmounts?.[i]);
+    // Back out revaluation deltas from cost basis so manually asserted gains show up.
+    const costTotal = rawCost - cumulativeAdjustment(unrealized.byMonth, month);
     const realizedThisPeriod = realizedByMonth.get(month) ?? 0;
     cumRealized += realizedThisPeriod;
     monthly.push({ month, cumulative: (mktTotal - costTotal) + cumRealized });

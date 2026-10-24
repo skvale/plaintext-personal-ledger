@@ -11,6 +11,7 @@
     account,
     postings = [],
     amount,
+    colorAccount,
     href,
     signed = false,
   }: {
@@ -19,6 +20,8 @@
     account?: string;
     postings?: { account: string; amount: number; commodity?: string }[];
     amount: number;
+    /** Account used to color the main amount, when it differs from the posting heuristic. */
+    colorAccount?: string;
     href?: string;
     signed?: boolean;
   } = $props();
@@ -36,7 +39,7 @@
       ? posPostings.find((p) => p.account.startsWith('expenses') || p.account.startsWith('income'))?.account ?? posPostings[0].account
       : account ?? sorted[0]?.account ?? '');
 
-  const amtColor = $derived(amountColor(amount, amtAccount, postings));
+  const amtColor = $derived(amountColor(amount, colorAccount ?? amtAccount, postings));
   const commodityFmt = $derived(parseCommodity(page.data.commodity ?? '$1,000.00'));
   const roundAmounts = $derived(page.data.settings?.display?.roundAmounts === true);
   const displayFmt = $derived(roundAmounts ? { ...commodityFmt, decimals: 0 } : commodityFmt);

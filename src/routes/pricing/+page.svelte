@@ -86,6 +86,7 @@
               return;
             }
             tickerEditing = false;
+            await refreshAll();
           }}
           disabled={tickerSaving}
           class="rounded-md bg-blue-300/10 px-3 py-1.5 text-xs font-medium text-blue-500 hover:bg-blue-300/20 disabled:opacity-40"
